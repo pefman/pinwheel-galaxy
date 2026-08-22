@@ -5,6 +5,68 @@ additive and dated. New features are added here every evolution cycle.
 
 ---
 
+## Variable Stars — a Living-Sky Layer
+
+- **Date added:** 2026-08-22
+- **Version:** 0.8.0
+- **Status:** Shipped & live on Vercel — https://pinwheel-galaxy.vercel.app
+
+### What + why
+
+A real night sky is never perfectly still: a fraction of stars brighten and dim
+on their own slow light curves, and a handful are giants — larger and softer.
+Variable Stars borrows that idea and layers it over the interactive starfield so
+the galaxy *breathes* even when you leave it alone. It is purely cosmetic,
+additive and **off by default**, so the default galaxy looks exactly as before.
+
+### How it works (high-level)
+
+- `lib/variableStars.ts` (new) holds the **pure** logic: a deterministic
+  `mulberry32` PRNG, `assignVariableStars(count, seed)` which gives every star a
+  stable profile `{ period, phase, amplitude, isGiant, isVariable }`, and
+  `variableBrightness` — a bounded sinusoid returning a multiplier in
+  `[1 - amplitude, 1 + amplitude]` so a star never goes black or blows out.
+  Because the assignment is a pure function of the index and a fixed seed, the
+  same star is always the same variable star across frames and reloads.
+- `components/StarField.tsx` gained a `variableMode` prop. It builds the
+  per-star profiles once in `resize()` (so they track the current star count but
+  never re-randomise mid-flight), then in the star draw pass multiplies each
+  star's alpha by its light curve and draws giants at `variableSize` (2.4×) —
+  all only when the layer is on. It touches the draw pass only, never the spring
+  physics, so it is fully orthogonal to gravity, warp, nebula, constellations,
+  meteors, zoom and Stellar Depth.
+- `app/page.tsx` gained a **Variable Stars: On/Off** chip in the dock.
+
+### Key files / components
+
+- `lib/variableStars.ts` (new) and `lib/variableStars.test.ts` (new, 12 tests).
+- `components/StarField.tsx` — new `variableMode` prop, profile build in
+  `resize()`, and draw-time light-curve + giant-size modulation.
+- `app/page.tsx` — the **Variable Stars** toggle chip.
+
+### User-facing behavior
+
+- Toggle **Variable Stars: On** and watch — over a few seconds a scattered
+  subset of stars gently brighten and dim at their own rates, while a few rare
+  giants glow noticeably larger and breathe more dramatically. The gravity well,
+  spin, and every other toggle keep working exactly as before.
+
+### How to test / try it
+
+1. `npm install` → `npm run build` → `npm start`; toggle **Variable Stars: On**
+   and watch the sky settle into a gentle twinkle of its own.
+2. Turn on Constellation or Stellar Depth together — the light curves compose
+   cleanly with those layers.
+3. `npm test` — 12 new tests cover determinism, range, giant/variable fractions,
+   light-curve bounds/periodicity/phase, and seed sensitivity.
+
+### Known limitations / follow-ups
+
+- Toggle state is not persisted across reloads (a follow-up could add a
+  `?variable=` param like `?z=` for zoom). All variable stars share one fixed
+  seed; future cycles could seed it from the galaxy config so a saved galaxy
+  keeps its own variable pattern.
+
 ## Stellar Depth — a 3D Parallax Layer for the Starfield
 
 - **Date added:** 2026-08-22

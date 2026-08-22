@@ -47,6 +47,13 @@ import {
   twinkleAlpha,
   twinklePhase,
 } from "@/lib/starDepth";
+import {
+  VARIABLE_SEED,
+  type VariableStar,
+  assignVariableStars,
+  variableAlpha,
+  variableSize,
+} from "@/lib/variableStars";
 
 const SPRING_K = 0.02; // how strongly stars return to their orbit
 const DAMPING = 0.86; // velocity damping per frame
@@ -159,6 +166,7 @@ export default function StarField({
   shooting = false,
   zoomEnabled = false,
   depthMode = false,
+  variableMode = false,
   onZoom,
 }: {
   active: boolean;
@@ -169,6 +177,9 @@ export default function StarField({
   zoomEnabled?: boolean;
   /** Stellar Depth: an opt-in 3D parallax + twinkle layer over the stars. */
   depthMode?: boolean;
+  /** Variable Stars: an opt-in living-sky layer — some stars brighten/dim on
+   * their own light curves and a few rare giants glow larger. */
+  variableMode?: boolean;
   /** Called with the live zoom whenever it changes, so the parent can share it. */
   onZoom?: (zoom: number) => void;
 }) {
@@ -194,6 +205,10 @@ export default function StarField({
     const depthSeed = DEPTH_SEED;
     let depths: number[] = [];
     let phases: number[] = [];
+    // Variable Stars: a stable per-star light-curve profile (some stars
+    // brighten/dim, giants are larger). Built in `resize()` so it tracks the
+    // current star count but never re-randomises between frames.
+    let variableAssign: VariableStar[] = [];
     // Stellar Depth: the eased cursor-parallax vector (px at depth 1). Near
     // stars shift by this × their depth, so the field reads as 3D.
     const parallax = { x: 0, y: 0 };
@@ -237,6 +252,13 @@ export default function StarField({
       } else {
         depths = [];
         phases = [];
+      }
+      // Variable Stars: (re)build the per-star light-curve profiles for the
+      // current star count when the layer is on; clear it when off.
+      if (variableMode) {
+        variableAssign = assignVariableStars(STAR_COUNT, VARIABLE_SEED);
+      } else {
+        variableAssign = [];
       }
     };
 
@@ -599,11 +621,16 @@ export default function StarField({
         // atmospheric-perspective scale (far stars smaller and dimmer).
         const twinkle = depthMode ? twinkleAlpha(phases[i] ?? 0, now / 1000, depth) : 1;
         const ds = depthScale(depth);
+        // Variable Stars: apply the per-star light curve (brightness) and, for
+        // giants, a larger drawn size. When the layer is off these are 1.
+        const vVar = variableMode ? (variableAssign[i] ?? null) : null;
+        const varMult = vVar ? variableAlpha(vVar, now / 1000) : 1;
+        const sizeMult = vVar ? variableSize(vVar) : 1;
         const sx = s.x + parallax.x * (depths[i] ?? 0);
         const sy = s.y + parallax.y * (depths[i] ?? 0);
-        const alpha = (s.baseAlpha + glow * 0.4) * twinkle * ds;
+        const alpha = (s.baseAlpha + glow * 0.4) * twinkle * ds * varMult;
         ctx.beginPath();
-        const radius = s.size * (2 + glow) * starScale * ds;
+        const radius = s.size * (2 + glow) * starScale * ds * sizeMult;
         const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, radius);
         grad.addColorStop(0, `hsla(${s.hue}, 90%, ${70 + glow * 20}%, ${alpha})`);
         grad.addColorStop(1, `hsla(${s.hue}, 90%, 60%, 0)`);
@@ -643,7 +670,17 @@ export default function StarField({
       canvas.removeEventListener("touchend", onTouchEnd);
       window.removeEventListener("resize", resize);
     };
-  }, [active, reduced, config, nebula, shooting, zoomEnabled, depthMode, onZoom]);
+  }, [
+    active,
+    reduced,
+    config,
+    nebula,
+    shooting,
+    zoomEnabled,
+    depthMode,
+    variableMode,
+    onZoom,
+  ]);
 
   return (
     <canvas
