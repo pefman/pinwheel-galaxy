@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import StarField from "@/components/StarField";
 import GalaxyDock from "@/components/GalaxyDock";
 import { useGalaxyParams } from "@/lib/useGalaxyParams";
@@ -31,15 +30,18 @@ const BUG_REPORT_URL = (() => {
 })();
 
 export default function Home() {
-  const { config, gravity, zoom, applyConfig, toggleGravity, shuffle, setZoom, shareQuery } =
-    useGalaxyParams();
-  const [constellations, setConstellations] = useState(false);
-  const [nebula, setNebula] = useState(false);
-  const [shooting, setShooting] = useState(false);
-  const [zoomEnabled, setZoomEnabled] = useState(false);
-  const [depth, setDepth] = useState(false);
-  const [variable, setVariable] = useState(false);
-  const [comet, setComet] = useState(false);
+  const {
+    config,
+    gravity,
+    zoom,
+    recipe,
+    applyConfig,
+    toggleGravity,
+    shuffle,
+    toggle,
+    setZoom,
+    shareQuery,
+  } = useGalaxyParams();
 
   return (
     <main className="relative min-h-screen overflow-hidden">
@@ -87,12 +89,12 @@ export default function Home() {
       <section className="relative flex min-h-screen items-center justify-center px-6">
         <StarField
           active={gravity}
-          constellation={constellations}
-          nebula={nebula}
-          shooting={shooting}
-          zoomEnabled={zoomEnabled}
-          depthMode={depth}
-          variableMode={variable}
+          constellation={recipe.constellation}
+          nebula={recipe.nebula}
+          shooting={recipe.meteors}
+          zoomEnabled={recipe.zoomMode}
+          depthMode={recipe.depth}
+          variableMode={recipe.variable}
           onZoom={setZoom}
         />
 
@@ -129,13 +131,13 @@ export default function Home() {
           shuffle={shuffle}
           label={shareQuery}
           environment={[
-            { label: "Nebula", active: nebula, onToggle: () => setNebula((n) => !n), color: "rgba(168,85,247,0.7)" },
-            { label: "Constellations", active: constellations, onToggle: () => setConstellations((c) => !c), color: "rgba(56,189,248,0.7)" },
-            { label: "Shooting Stars", active: shooting, onToggle: () => setShooting((s) => !s), color: "rgba(167,139,250,0.7)" },
-            { label: "Zoom", active: zoomEnabled, onToggle: () => setZoomEnabled((z) => !z), color: "rgba(34,211,238,0.7)" },
-            { label: "Depth", active: depth, onToggle: () => setDepth((d) => !d), color: "rgba(132,204,227,0.7)" },
-            { label: "Variable Stars", active: variable, onToggle: () => setVariable((v) => !v), color: "rgba(250,204,21,0.75)" },
-            { label: "Comet", active: comet, onToggle: () => setComet((c) => !c), color: "rgba(134,239,233,0.85)" },
+            { label: "Nebula", active: recipe.nebula, onToggle: () => toggle("nebula"), color: "rgba(168,85,247,0.7)" },
+            { label: "Constellations", active: recipe.constellation, onToggle: () => toggle("constellation"), color: "rgba(56,189,248,0.7)" },
+            { label: "Shooting Stars", active: recipe.meteors, onToggle: () => toggle("meteors"), color: "rgba(167,139,250,0.7)" },
+            { label: "Zoom", active: recipe.zoomMode, onToggle: () => toggle("zoomMode"), color: "rgba(34,211,238,0.7)" },
+            { label: "Depth", active: recipe.depth, onToggle: () => toggle("depth"), color: "rgba(132,204,227,0.7)" },
+            { label: "Variable Stars", active: recipe.variable, onToggle: () => toggle("variable"), color: "rgba(250,204,21,0.75)" },
+            { label: "Comet", active: recipe.comet, onToggle: () => toggle("comet"), color: "rgba(134,239,233,0.85)" },
           ]}
         />
       </section>
