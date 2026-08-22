@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import StarField from "@/components/StarField";
 import GalaxyDock from "@/components/GalaxyDock";
 import { useGalaxyParams } from "@/lib/useGalaxyParams";
@@ -7,6 +8,7 @@ import { useGalaxyParams } from "@/lib/useGalaxyParams";
 export default function Home() {
   const { config, gravity, applyConfig, toggleGravity, shuffle, shareQuery } =
     useGalaxyParams();
+  const [constellations, setConstellations] = useState(false);
 
   return (
     <main className="relative min-h-screen overflow-hidden">
@@ -33,7 +35,7 @@ export default function Home() {
 
       {/* Hero with the interactive starfield */}
       <section className="relative flex min-h-screen items-center justify-center px-6">
-        <StarField active={gravity} />
+        <StarField active={gravity} constellation={constellations} />
 
         <div className="relative z-10 max-w-3xl text-center">
           <p className="animate-fade-up opacity-0 animation-delay-100 text-sm font-medium uppercase tracking-[0.3em] text-cosmos-cyan">
@@ -68,6 +70,24 @@ export default function Home() {
           shuffle={shuffle}
           label={shareQuery}
         />
+
+        {/* Constellation mode toggle */}
+        <div className="absolute bottom-6 left-1/2 z-20 -translate-x-1/2">
+          <button
+            onClick={() => setConstellations((c) => !c)}
+            aria-pressed={constellations}
+            className={`glass rounded-full px-4 py-2 font-medium transition-colors ${
+              constellations ? "text-white" : "text-white/70"
+            }`}
+            style={{
+              backgroundColor: constellations
+                ? "rgba(56,189,248,0.7)"
+                : "rgba(255,255,255,0.12)",
+            }}
+          >
+            Constellations: {constellations ? "On" : "Off"}
+          </button>
+        </div>
       </section>
 
       {/* Features */}

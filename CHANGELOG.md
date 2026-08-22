@@ -17,6 +17,12 @@ follows [Keep a Changelog](https://keepachangelog.com) conventions, plus a
     preserved Gravity toggle, and a **Shuffle** (🎲) button.
   - `components/StarField.tsx` gained an additive `config` prop; defaults are
     unchanged when no params are present.
+- **Constellation Mode** — an optional toggle that connects nearby stars with a
+  living web of faint cyan links. Links form between stars within a threshold
+  distance and brighten where the stars are moving fastest, so the web ripples
+  with the gravity well and to click shockwaves. Implemented as an additive draw
+  pass in `components/StarField.tsx`; controlled by a new "Constellations: On/Off"
+  toggle in the hero control bar.
 
 ### Fixed
 
@@ -27,7 +33,10 @@ follows [Keep a Changelog](https://keepachangelog.com) conventions, plus a
 ### Notes
 
 - All changes are additive and non-breaking; the original gravity well and its
-  default look are preserved.
+  default look are preserved. Constellation Mode is orthogonal to the Gravity
+  Well toggle.
+- Both features were built, locally verified (HTTP 200), and deployed to Vercel
+  production.
 
 ## [0.1.0] — 2026-08-22
 

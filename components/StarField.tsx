@@ -30,6 +30,11 @@ const PULSE_WIDTH = 120; // px thickness of the shockwave ring
 const PULSE_STRENGTH = 260; // px/s kick given to stars a pulse crosses
 const DPR_CAP = 2;
 
+// Constellation mode: connect nearby stars with faint linking lines.
+const CONSTELLATION_MAX_DIST = 96; // px — two stars link when closer than this
+const CONSTELLATION_MIN_ALPHA = 0.06;
+const CONSTELLATION_MAX_ALPHA = 0.32;
+
 interface Star {
   radius: number; // orbit radius from galaxy centre (px)
   angle: number; // base angle on its spiral arm
@@ -116,9 +121,11 @@ function useReducedMotion(): boolean {
 export default function StarField({
   active,
   config = DEFAULT_CONFIG,
+  constellation = false,
 }: {
   active: boolean;
   config?: GalaxyConfig;
+  constellation?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reduced = useReducedMotion();
@@ -252,6 +259,39 @@ export default function StarField({
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
         ctx.stroke();
+      }
+
+      // Constellation mode: draw faint links between nearby stars.
+      if (constellation) {
+        for (let i = 0; i < stars.length; i++) {
+          const a = stars[i];
+          for (let j = i + 1; j < stars.length; j++) {
+            const b = stars[j];
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const dist2 = dx * dx + dy * dy;
+            if (dist2 > CONSTELLATION_MAX_DIST * CONSTELLATION_MAX_DIST) continue;
+            const dist = Math.sqrt(dist2) || 1;
+            const proximity = 1 - dist / CONSTELLATION_MAX_DIST; // 1 (close) -> 0 (far)
+            // React to motion: links brighten where stars are moving fast,
+            // so the web ripples with the gravity well and pulses.
+            const motion =
+              (Math.hypot(a.vx, a.vy) + Math.hypot(b.vx, b.vy)) / 80;
+            const alpha =
+              CONSTELLATION_MIN_ALPHA +
+              proximity * CONSTELLATION_MAX_ALPHA +
+              Math.min(1, motion) * 0.15;
+            ctx.strokeStyle = `hsla(195, 80%, 72%, ${Math.min(
+              0.6,
+              alpha,
+            )})`;
+            ctx.lineWidth = 0.6 + proximity * 0.9;
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.stroke();
+          }
+        }
       }
 
       for (const s of stars) {

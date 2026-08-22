@@ -51,6 +51,56 @@ additive: the original gravity well is untouched.
 
 See `docs/features/galaxy-presets.md` for the full doc.
 
+## Constellation Mode — Living Star Links
+
+- **Date added:** 2026-08-22
+- **Status:** Shipped (0.2.0 — built, locally verified, deployed to Vercel production)
+
+### What + why
+An optional toggle that draws faint connecting lines between nearby stars,
+turning the starfield into a **living constellation web**. Links form between any
+two stars closer than a threshold and brighten where the stars are moving
+fastest, so the web ripples in response to the gravity well and to click
+shockwaves.
+
+It exists to give the isolated points structure and narrative — evoking the
+"Galaxy" in the product name — as a small, self-contained, purely additive layer
+on the existing gravity-well renderer.
+
+### How it works (high-level)
+- Implemented as an extra draw pass in `components/StarField.tsx` before stars
+  are painted.
+- For each star pair inside `CONSTELLATION_MAX_DIST` (96 px), a `proximity`
+  term sets line alpha/width and a `motion` term (from the stars' speed)
+  brightens links where the well or a pulse is dragging stars.
+- A squared-distance cull skips far pairs; the pass is `O(n²)` over the
+  320 stars — trivial for the canvas and only runs when the mode is on.
+
+### Key files / components
+- `components/StarField.tsx` — new `constellation` prop + link draw pass.
+- `app/page.tsx` — the **Constellations: On/Off** toggle in the hero control bar.
+
+### User-facing behavior
+- Toggle "Constellations: On/Off" (next to the gravity-well toggle) to enable
+  the linking web.
+- Nearby stars connect with faint cyan lines forming shifting patterns.
+- Move the cursor: links near the well stretch and brighten.
+- Click: a ring of links flashes as the shockwave passes.
+- Works independently of the gravity-well toggle.
+
+### How to test / try it
+1. `npm install` then `npm run build` and `npm start`.
+2. Open the site, scroll to the hero.
+3. Toggle "Constellations: On" — lines appear between nearby stars.
+4. Move the cursor — nearby links stretch and brighten.
+5. Click — a ring of links flashes.
+6. Toggle Off — the web disappears, stars remain.
+
+### Known limitations / follow-ups
+- `O(n²)` linking; a spatial grid would help if `STAR_COUNT` grows large.
+- Straight segments, not curved nebula ribbons (possible follow-up: glow bloom).
+- Toggle state not persisted across reloads.
+
 ---
 
 ## Gravity Well — Interactive Starfield
