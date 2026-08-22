@@ -74,6 +74,7 @@ import {
   terminatorXRadius,
   type MoonState,
 } from "@/lib/moon";
+import { computeSupernova } from "@/lib/supernova";
 
 const SPRING_K = 0.02; // how strongly stars return to their orbit
 const DAMPING = 0.86; // velocity damping per frame
@@ -199,6 +200,7 @@ export default function StarField({
   cometMode = false,
   auroraMode = false,
   moonMode = false,
+  supernovaMode = false,
   onZoom,
   canvasRef,
 }: {
@@ -223,6 +225,12 @@ export default function StarField({
    * and wanes through a full cycle. Pure atmosphere — never touches the stars.
    */
   moonMode?: boolean;
+  /**
+   * Supernova: an opt-in, rare, discrete event — a background star that lives
+   * quietly, then periodically explodes into a brilliant flash that fades to a
+   * faint remnant. Pure atmosphere — never touches the stars.
+   */
+  supernovaMode?: boolean;
   /** Called with the live zoom whenever it changes, so the parent can share it. */
   onZoom?: (zoom: number) => void;
   /** Forwarded to the canvas element, so the parent can capture it (e.g. for a
@@ -297,6 +305,11 @@ export default function StarField({
     // on; cleared when off.
     let moonTime = 0;
     let moon: MoonState = {} as MoonState;
+    // Supernova: a running clock for the deterministic explosion schedule. The
+    // active explosion (position, phase, intensity, shell, remnant) is recomputed
+    // each frame from this clock via `computeSupernova` — cheap arithmetic, so
+    // the flash and its expanding shockwave read as smooth rather than jittery.
+    let supernovaTime = 0;
 
     const resize = () => {
       dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
@@ -407,6 +420,11 @@ export default function StarField({
       // smoothly and wanes over its month.
       if (moonMode) {
         moonTime += dt * 1000;
+      }
+
+      // Supernova: advance the explosion schedule clock (ms), matching the moon's.
+      if (supernovaMode) {
+        supernovaTime += dt * 1000;
       }
 
       const cx = w / 2;
@@ -704,6 +722,85 @@ export default function StarField({
         ctx.fill();
         ctx.restore();
       }
+
+      // Supernova: a rare, *discrete* event to complement the continuous sky
+      // layers. A background star lives quietly, then periodically explodes into
+      // a brilliant blue-white flash with diffraction spikes and an expanding
+      // shockwave shell, fading to a faint remnant. Painted behind the stars (a
+      // supernova inside the distant spiral we are looking at) at screen scale,
+      // like the moon. Pure atmosphere — never touches the stars.
+      if (supernovaMode) {
+        const s = computeSupernova({ time: supernovaTime, width: w, height: h });
+        if (s.phase !== "quiet") {
+          const sx = s.x;
+          const sy = s.y;
+          const I = Math.max(0, Math.min(1, s.intensity));
+          // Shockwave shell: a thin expanding ring, only visible during the fade.
+          if (s.shellAlpha > 0.001 && s.shellRadius > 1) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(sx, sy, s.shellRadius, 0, Math.PI * 2);
+            ctx.strokeStyle = `hsla(200, 80%, 72%, ${s.shellAlpha})`;
+            ctx.lineWidth = 1.5 + s.shellRadius * 0.04;
+            ctx.stroke();
+            // Soft glow wrapping the shell.
+            const shellGlow = ctx.createRadialGradient(
+              sx,
+              sy,
+              s.shellRadius * 0.9,
+              sx,
+              sy,
+              s.shellRadius * 1.25,
+            );
+            shellGlow.addColorStop(0, `hsla(200, 85%, 70%, ${s.shellAlpha * 0.25})`);
+            shellGlow.addColorStop(1, "hsla(200, 85%, 70%, 0)");
+            ctx.fillStyle = shellGlow;
+            ctx.beginPath();
+            ctx.arc(sx, sy, s.shellRadius * 1.25, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+          // Diffraction spikes: a thin cross through the core, length scaling
+          // with intensity — the way a bright object reads through a lens.
+          if (I > 0.02) {
+            const spikeLen = 8 + s.spikeLength * (26 + s.shellRadius * 0.3);
+            const spikeAlpha = 0.35 * I;
+            ctx.save();
+            ctx.strokeStyle = `hsla(210, 90%, 88%, ${spikeAlpha})`;
+            ctx.lineWidth = 1.4;
+            for (let a = 0; a < 4; a++) {
+              const angle = (a * Math.PI) / 2 + Math.PI / 6;
+              const cos = Math.cos(angle);
+              const sin = Math.sin(angle);
+              ctx.beginPath();
+              ctx.moveTo(sx - cos * spikeLen, sy - sin * spikeLen);
+              ctx.lineTo(sx + cos * spikeLen, sy + sin * spikeLen);
+              ctx.stroke();
+            }
+            ctx.restore();
+          }
+          // Core glow: a radial bloom whose size and brightness track intensity.
+          const coreR = 3 + I * 10 + s.shellRadius * 0.05;
+          const core = ctx.createRadialGradient(sx, sy, 0, sx, sy, coreR * 2.4);
+          if (s.phase === "remnant") {
+            core.addColorStop(0, `hsla(210, 60%, 85%, ${s.remnantAlpha * 0.9})`);
+            core.addColorStop(1, "hsla(210, 60%, 85%, 0)");
+          } else {
+            core.addColorStop(0, `hsla(210, 95%, 96%, ${0.85 + 0.15 * I})`);
+            core.addColorStop(0.35, `hsla(215, 95%, 82%, ${0.7 * I})`);
+            core.addColorStop(1, "hsla(220, 90%, 70%, 0)");
+          }
+          ctx.fillStyle = core;
+          ctx.beginPath();
+          ctx.arc(sx, sy, coreR * 2.4, 0, Math.PI * 2);
+          ctx.fill();
+          // Bright central point.
+          ctx.fillStyle = `hsla(210, 100%, 98%, ${0.6 + 0.4 * I})`;
+          ctx.beginPath();
+          ctx.arc(sx, sy, 1.4 + I * 1.6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
       for (const p of pulses) {
         // The ring only reaches radius == PULSE_WIDTH once fully grown, so while
         // it is young the inner radius (p.radius - PULSE_WIDTH) is negative and
@@ -966,6 +1063,7 @@ export default function StarField({
     cometMode,
     auroraMode,
     moonMode,
+    supernovaMode,
     onZoom,
   ]);
 

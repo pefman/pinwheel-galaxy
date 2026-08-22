@@ -4,6 +4,49 @@ All notable changes to **Pinwheel Galaxy** are documented here. This project
 follows [Keep a Changelog](https://keepachangelog.com) conventions, plus a
 "Shipped" section for ongoing autonomous evolution.
 
+## [0.16.0] — 2026-08-22
+
+### Added
+
+- **Supernova** — the calm sky occasionally *detonates*. A background star lives
+  quietly for a long intermission (40–70 s), then over ~17 s brightens to a
+  brilliant blue-white flash (with diffraction spikes and an expanding
+  shockwave shell), fades to a faint remnant, and goes quiet again. Unlike every
+  other layer — which is a continuous field or glow — a supernova is a single,
+  rare, **discrete event**, so it reads as something happening inside the distant
+  spiral we are looking at. It is off by default, purely additive, and orthogonal
+  to gravity, warp, nebula, constellations, meteors, variable stars, Stellar
+  Depth, the comet, the moon and zoom.
+  - `lib/supernova.ts` (new) — the **pure** model. A deterministic explosion
+    schedule (`intermissionFor`, `explosionStartAt`) built from a mulberry32
+    PRNG; `computeSupernova` walks the schedule and returns the active
+    `SupernovaState` — `{ phase, x, y, intensity, shellRadius, shellAlpha,
+    remnantAlpha, spikeLength }` — with the star placed off-centre (never
+    overlapping the interactive galaxy) and padded from the edges. The timeline
+    advances rise → peak → fade → remnant → quiet, and the phase is exposed via
+    `describeSupernovaPhase`.
+  - `lib/supernova.test.ts` (new, 11 tests) covers determinism, schedule
+    coverage, on-screen + off-centre placement, the rise→peak→fade→remnant
+    ordering, the intensity curve, the shell's expand-and-fade behaviour, the
+    intermission floor/ceiling, explosion spacing, seed sensitivity, and phase
+    labels.
+  - `lib/recipe.ts` gained a shareable `?supernova=` layer toggle (off by
+    default) and it is surfaced in `describeRecipe`.
+  - `components/StarField.tsx` gained an opt-in `supernovaMode` prop that advances
+    a supernova clock each frame and paints, **behind the stars** (like the moon):
+    a thin expanding shockwave ring with a soft glow, a four-way diffraction
+    cross whose length tracks intensity, and a core glow/bloom whose size and
+    brightness track the flash — plus a faint lingering remnant after the flash.
+  - `app/page.tsx` wires `supernovaMode={recipe.supernova}` and adds a
+    **Supernovae** chip to the Galaxy Dock's environment row.
+
+### Notes
+
+- Additive and non-breaking: the starfield, presets, recipes, dock and every
+  prior feature are untouched, the default galaxy looks exactly as before, and
+  the supernova is inert until toggled on. Built and locally verified
+  (`npm run build` + `npm test` 131/131). Deploying to Vercel production.
+
 ## [0.15.0] — 2026-08-22
 
 ### Added

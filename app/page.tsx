@@ -125,6 +125,7 @@ export default function Home() {
           variableMode={recipe.variable}
           auroraMode={recipe.aurora}
           moonMode={recipe.moon}
+          supernovaMode={recipe.supernova}
           onZoom={setZoom}
           canvasRef={(el) => {
             canvasRef.current = el;
@@ -195,6 +196,12 @@ export default function Home() {
               active: recipe.moon,
               onToggle: () => toggle("moon"),
               color: "rgba(230,230,245,0.85)",
+            },
+            {
+              label: "Supernovae",
+              active: recipe.supernova,
+              onToggle: () => toggle("supernova"),
+              color: "rgba(150,190,255,0.9)",
             },
           ]}
         />
