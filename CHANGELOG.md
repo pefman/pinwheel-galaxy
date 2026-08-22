@@ -4,6 +4,50 @@ All notable changes to **Pinwheel Galaxy** are documented here. This project
 follows [Keep a Changelog](https://keepachangelog.com) conventions, plus a
 "Shipped" section for ongoing autonomous evolution.
 
+## [0.13.0] — 2026-08-22
+
+### Added
+
+- **Shareable Galaxy Prints** — export the galaxy you are looking at as a
+  branded, shareable PNG “print”. A new **Share** (⛶) button in the Galaxy Dock
+  opens a small popover that captures the live starfield, composites it onto a
+  1080×1350 portrait card (cosmos glow, a cover-cropped galaxy inside a rounded
+  frame, and a footer with the brand, a one-line galaxy description, and the
+  shareable deep link), and offers three ways out: **Download PNG**, **Web
+  Share** (native OS share sheet, when available), and **Copy link** (copies the
+  current deep link). The print is a pure, deterministic function of the current
+  galaxy and URL — no canvas, no state, no network — so the same galaxy always
+  produces the same image.
+  - `lib/exportCard.ts` (new) — the **pure** composition model: `computeCover`
+    (fit/crop of the galaxy onto the card image window), `wrapText` (font-aware
+    word wrapping), `imageWindow` (the framed image rectangle), `deepLink`
+    (canonical share URL), and `describePrint` (the human-readable galaxy label
+    with default labels stripped). `lib/exportCard.test.ts` (new, 10 tests)
+    covers cover geometry, wrapping, window math, deep-link composition, and the
+    description.
+  - `components/GalaxyShareCard.tsx` (new) — the client runtime: a
+    `getCanvas`/`deepLinkUrl`/`description`-driven component that renders the
+    card, wires up Download / Web Share / Copy link, and manages only its own
+    preview state. It is a pure function of its props, so it is trivially
+    testable and side-effect free until the user acts.
+  - `components/StarField.tsx` gained an optional `canvasRef` callback so the
+    parent can forward the live canvas element to the share card. The existing
+    internal canvas ref is now `canvasElementRef` to avoid a name clash.
+  - `components/GalaxyDock.tsx` gained an optional `share` slot; a **Share**
+    button is surfaced next to Shuffle / Gravity only when the parent passes a
+    control, keeping the dock lean by default.
+  - `app/page.tsx` wires it together: it forwards the live canvas to StarField,
+    builds the current deep link from the page URL, and renders
+    `GalaxyShareCard` in the dock with a description derived from
+    `describeConfig` + `describeRecipe`.
+
+### Notes
+
+- Additive and non-breaking: the starfield, presets, recipes, dock and Galaxy
+  of the Day are untouched, the default galaxy looks exactly as before, and the
+  Share control is inert until clicked. Built and locally verified
+  (`npm run build` + `npm test` 100/100). Deploying to Vercel production.
+
 ## [0.12.0] — 2026-08-22
 
 ### Added

@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import StarField from "@/components/StarField";
 import GalaxyDock from "@/components/GalaxyDock";
+import GalaxyShareCard from "@/components/GalaxyShareCard";
 import { useGalaxyParams } from "@/lib/useGalaxyParams";
 import { galaxyOfDay, dailyDeepLink, dayKey, DailyGalaxy } from "@/lib/galaxyOfDay";
 import { useSoundscape, installSoundscapeGesture } from "@/lib/useSoundscape";
+import { describeConfig } from "@/lib/galaxyPresets";
+import { describeRecipe } from "@/lib/recipe";
+import { deepLink, describePrint } from "@/lib/exportCard";
 
 // "Report a bug" sends visitors straight to a pre-filled GitHub issue so bugs
 // land in the tracker where the autopilot picks them up. The body is a small
@@ -52,6 +56,20 @@ export default function Home() {
   // default; audio starts on the first user gesture (see installSoundscapeGesture).
   useSoundscape(config, recipe, sound);
   installSoundscapeGesture();
+
+  // Forward the live canvas element to the share card so it can capture and
+  // export the current galaxy as a branded image.
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  // The deep link for the current galaxy — the canonical share URL that the
+  // exported card and the “Copy link” action both point back to.
+  // Guarded for server-side rendering, where `window` is not defined.
+  const deepLinkUrl = useMemo(() => {
+    if (typeof window === "undefined") {
+      return deepLink("https://pinwheelgalaxy.com", "/", "");
+    }
+    return deepLink(window.location.origin, window.location.pathname, window.location.search);
+  }, []);
 
   return (
     <main className="relative min-h-screen overflow-hidden">
@@ -106,6 +124,9 @@ export default function Home() {
           depthMode={recipe.depth}
           variableMode={recipe.variable}
           onZoom={setZoom}
+          canvasRef={(el) => {
+            canvasRef.current = el;
+          }}
         />
 
         <div className="relative z-10 max-w-3xl text-center">
@@ -140,6 +161,13 @@ export default function Home() {
           toggleGravity={toggleGravity}
           shuffle={shuffle}
           label={shareQuery}
+          share={
+            <GalaxyShareCard
+              getCanvas={() => canvasRef.current}
+              deepLinkUrl={deepLinkUrl}
+              description={describePrint(describeConfig(config), describeRecipe(recipe))}
+            />
+          }
           environment={[
             { label: "Nebula", active: recipe.nebula, onToggle: () => toggle("nebula"), color: "rgba(168,85,247,0.7)" },
             { label: "Constellations", active: recipe.constellation, onToggle: () => toggle("constellation"), color: "rgba(56,189,248,0.7)" },
