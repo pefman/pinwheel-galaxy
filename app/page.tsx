@@ -125,81 +125,15 @@ export default function Home() {
           toggleGravity={toggleGravity}
           shuffle={shuffle}
           label={shareQuery}
+          environment={[
+            { label: "Nebula", active: nebula, onToggle: () => setNebula((n) => !n), color: "rgba(168,85,247,0.7)" },
+            { label: "Constellations", active: constellations, onToggle: () => setConstellations((c) => !c), color: "rgba(56,189,248,0.7)" },
+            { label: "Shooting Stars", active: shooting, onToggle: () => setShooting((s) => !s), color: "rgba(167,139,250,0.7)" },
+            { label: "Zoom", active: zoomEnabled, onToggle: () => setZoomEnabled((z) => !z), color: "rgba(34,211,238,0.7)" },
+            { label: "Depth", active: depth, onToggle: () => setDepth((d) => !d), color: "rgba(132,204,227,0.7)" },
+            { label: "Variable Stars", active: variable, onToggle: () => setVariable((v) => !v), color: "rgba(250,204,21,0.75)" },
+          ]}
         />
-
-        {/* Hero mode toggles — nebula backdrop + constellation web */}
-        <div className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2">
-          <button
-            onClick={() => setNebula((n) => !n)}
-            aria-pressed={nebula}
-            className={`glass rounded-full px-4 py-2 font-medium transition-colors ${
-              nebula ? "text-white" : "text-white/70"
-            }`}
-            style={{
-              backgroundColor: nebula
-                ? "rgba(168,85,247,0.7)"
-                : "rgba(255,255,255,0.12)",
-            }}
-          >
-            Nebula: {nebula ? "On" : "Off"}
-          </button>
-          <button
-            onClick={() => setConstellations((c) => !c)}
-            aria-pressed={constellations}
-            className={`glass rounded-full px-4 py-2 font-medium transition-colors ${
-              constellations ? "text-white" : "text-white/70"
-            }`}
-            style={{
-              backgroundColor: constellations
-                ? "rgba(56,189,248,0.7)"
-                : "rgba(255,255,255,0.12)",
-            }}
-          >
-            Constellations: {constellations ? "On" : "Off"}
-          </button>
-          <button
-            onClick={() => setShooting((s) => !s)}
-            aria-pressed={shooting}
-            className={`glass rounded-full px-4 py-2 font-medium transition-colors ${
-              shooting ? "text-white" : "text-white/70"
-            }`}
-            style={{
-              backgroundColor: shooting
-                ? "rgba(167,139,250,0.7)"
-                : "rgba(255,255,255,0.12)",
-            }}
-          >
-            Shooting Stars: {shooting ? "On" : "Off"}
-          </button>
-          <button
-            onClick={() => setZoomEnabled((z) => !z)}
-            aria-pressed={zoomEnabled}
-            className={`glass rounded-full px-4 py-2 font-medium transition-colors ${
-              zoomEnabled ? "text-white" : "text-white/70"
-            }`}
-            style={{
-              backgroundColor: zoomEnabled
-                ? "rgba(34,211,238,0.7)"
-                : "rgba(255,255,255,0.12)",
-            }}
-          >
-            Zoom: {zoomEnabled ? "On" : "Off"}
-          </button>
-          <button
-            onClick={() => setDepth((d) => !d)}
-            aria-pressed={depth}
-            className={`glass rounded-full px-4 py-2 font-medium transition-colors ${
-              depth ? "text-white" : "text-white/70"
-            }`}
-            style={{
-              backgroundColor: depth
-                ? "rgba(132,204,227,0.7)"
-                : "rgba(255,255,255,0.12)",
-            }}
-          >
-            Depth: {depth ? "On" : "Off"}
-          </button>
-        </div>
       </section>
 
       {/* Features */}

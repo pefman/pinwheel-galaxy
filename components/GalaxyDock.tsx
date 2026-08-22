@@ -18,6 +18,19 @@
 
 import { GalaxyConfig, RANGES, THEMES, describeConfig } from "@/lib/galaxyPresets";
 
+/**
+ * An environment/sky toggle rendered as a compact chip in the dock's second
+ * row (Nebula, Constellations, Shooting Stars, Zoom, Stellar Depth, …).
+ * `color` is the fill used while the toggle is on; it is passed in so the dock
+ * stays generic and every toggle keeps its own identity colour.
+ */
+export interface EnvironmentToggle {
+  label: string;
+  active: boolean;
+  onToggle: () => void;
+  color: string;
+}
+
 function Knob({
   label,
   value,
@@ -67,6 +80,7 @@ export default function GalaxyDock({
   toggleGravity,
   shuffle,
   label,
+  environment,
 }: {
   config: GalaxyConfig;
   gravity: boolean;
@@ -74,6 +88,7 @@ export default function GalaxyDock({
   toggleGravity: () => void;
   shuffle: () => void;
   label: string | null;
+  environment?: EnvironmentToggle[];
 }) {
   const inc = (k: keyof Omit<GalaxyConfig, "theme">) => (v: number) => {
     const { max } = RANGES[k];
@@ -86,13 +101,14 @@ export default function GalaxyDock({
 
   return (
     <div className="absolute bottom-6 left-1/2 z-20 w-[min(680px,92vw)] -translate-x-1/2">
-      <div className="glass rounded-2xl px-3 py-3 text-sm sm:px-5">
+      <div className="glass max-h-[70vh] overflow-x-auto rounded-2xl px-3 py-3 text-sm sm:px-5">
         <p className="mb-2 flex items-center justify-between px-1 text-[11px] font-medium uppercase tracking-widest text-white/45">
           <span>Galaxy controls</span>
           <span className="hidden font-mono tabular-nums text-white/35 sm:inline">{label ?? describeConfig(config)}</span>
         </p>
 
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
           {/* Theme swatches */}
           <div className="flex items-center gap-2">
             <span className="w-16 text-left text-white/50">Theme</span>
@@ -160,6 +176,30 @@ export default function GalaxyDock({
               Gravity: {gravity ? "On" : "Off"}
             </button>
           </div>
+        </div>
+
+        {/* Environment/sky toggles — a single, wrap-friendly row of compact
+            chips. Kept in the same dock (not a second floating overlay) so the
+            controls never collide or spill off the edges on narrow screens. */}
+        {environment && environment.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            {environment.map((t) => (
+              <button
+                key={t.label}
+                onClick={t.onToggle}
+                aria-pressed={t.active}
+                aria-label={`Toggle ${t.label}`}
+                title={`Toggle ${t.label}`}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  t.active ? "text-white" : "text-white/65"
+                }`}
+                style={{ backgroundColor: t.active ? t.color : "rgba(255,255,255,0.1)" }}
+              >
+                {t.label}: {t.active ? "On" : "Off"}
+              </button>
+            ))}
+          </div>
+        )}
         </div>
       </div>
     </div>
