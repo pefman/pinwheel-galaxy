@@ -5,6 +5,89 @@ additive and dated. New features are added here every evolution cycle.
 
 ---
 
+## Supernova — a Star That Quietly Lives, Then Explodes
+
+- **Date added:** 2026-08-22
+- **Version:** 0.16.0
+- **Status:** Shipped & live on Vercel — https://pinwheel-galaxy.vercel.app
+
+### What + why
+
+Every other sky layer is either a field of stars or a soft, *continuous*
+glow/motion — nebula drifting, aurora swaying, meteors streaking, the moon's steady
+drift. Supernova is deliberately different: a single, rare, **discrete event**.
+A background star lives quietly for a long intermission (40–70 s), then over
+~17 s brightens to a brilliant blue-white flash — diffraction spikes, an
+expanding shockwave shell — fades to a faint remnant, and goes quiet again. It
+reads as a supernova happening *inside the distant spiral we are looking at*,
+giving a calm sky an occasional moment of wonder rather than constant noise.
+
+### How it works (high-level)
+
+- `lib/supernova.ts` (new) holds the **pure** logic, unit-tested (`lib/supernova.test.ts`,
+  11 tests). A deterministic explosion schedule is built from a mulberry32 PRNG:
+  `intermissionFor(index, seed)` returns the gap between explosions (clamped to
+  a 40–70 s floor/ceiling and gently seed-varied), and `explosionStartAt(index,
+  seed)` is the cumulative wall-clock start of each explosion. `computeSupernova`
+  walks the schedule from a monotonic `time` (ms) and returns the active
+  `SupernovaState` — `{ phase, x, y, intensity, shellRadius, shellAlpha,
+  remnantAlpha, spikeLength }` — advancing rise → peak → fade → remnant → quiet.
+  The star is placed once, deterministically, off-centre (never overlapping the
+  interactive galaxy) and padded from the edges.
+- The phase geometry is exposed so it is testable without a canvas: `intensity`
+  ramps 0→1 over the 2.5 s rise, holds near 1 (with a subtle double-pulse) over
+  the 1.5 s peak, then falls 1→0 over the 12 s fade while the shell expands and
+  dims; a 3 s remnant leaves a faint lingering point.
+- `components/StarField.tsx` gained an opt-in `supernovaMode` prop that advances
+  a supernova clock each frame and paints, **behind the stars** (like the moon):
+  a thin expanding shockwave ring with a soft glow, a four-way diffraction cross
+  whose length tracks intensity, and a core glow/bloom whose size and brightness
+  track the flash, plus the faint remnant. Pure atmosphere — never touches the
+  stars, orthogonal to every other layer.
+- `lib/recipe.ts` gained a shareable `?supernova=` layer toggle (off by default,
+  so a calm galaxy keeps a tidy URL) and it is surfaced in `describeRecipe`.
+- `app/page.tsx` wires `supernovaMode={recipe.supernova}` and adds a **Supernovae**
+  chip to the Galaxy Dock's environment row.
+
+### Key files / components
+
+- `lib/supernova.ts` (new) and `lib/supernova.test.ts` (new, 11 tests).
+- `components/StarField.tsx` — new `supernovaMode` prop, supernova clock, and the
+  behind-the-stars flash/shell/spikes/core draw.
+- `lib/recipe.ts` — the shareable `?supernova=` layer toggle.
+- `app/page.tsx` — the **Supernovae** toggle chip.
+
+### User-facing behavior
+
+- Toggle **Supernovae: On** and wait — the sky looks calm, then, every so often,
+  a distant star flares up in a bright flash with spikes and a growing ring, then
+  fades to a faint point before going quiet again for another 40–70 s. It is a
+  rare punctuation mark, not a constant effect. Every other toggle, knob and the
+  gravity well keep working exactly as before.
+
+### How to test / try it
+
+1. `npm install` → `npm run build` → `npm start`; toggle **Supernovae: On** and
+  wait for a flash (or set a short intermission via the seed). Add `?supernova=on`
+  to the URL to share.
+2. Toggle it off — the sky goes back to the star-only field; nothing else
+   changes.
+3. `npm test` — 11 new tests cover determinism, schedule coverage, on-screen /
+   off-centre placement, the rise→peak→fade→remnant ordering, the intensity
+   curve, the shell's expand-and-fade behaviour, the intermission floor/ceiling,
+   explosion spacing, seed sensitivity, and phase labels.
+
+### Known limitations / follow-ups
+
+- The schedule is one sparse event with a fixed blue-white colour. A follow-up
+  could vary progenitor colour (M-type red vs O-type blue-white), add a second
+  simultaneous supernova occasionally, or let the flash briefly light nearby
+  nebula.
+- Intermissions (40–70 s) are tuned for a "rare punctuation mark"; a visitor who
+  wants to see it immediately can toggle it on and wait, or a future version
+  could expose an event rate.
+
+
 ## Lunar Transit — a Drifting, Waxing/Waning Moon
 
 - **Date added:** 2026-08-22

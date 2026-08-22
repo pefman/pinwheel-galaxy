@@ -29,6 +29,9 @@ export interface GalaxyRecipe {
   aurora: boolean;
   /** Lunar Transit: an opt-in moon that drifts and wanes across the sky. */
   moon: boolean;
+  /** Supernova: an opt-in rare event — a background star that explodes into a
+   * flash that fades to a faint remnant. */
+  supernova: boolean;
 }
 
 export const DEFAULT_RECIPE: GalaxyRecipe = {
@@ -41,6 +44,7 @@ export const DEFAULT_RECIPE: GalaxyRecipe = {
   zoomMode: false,
   aurora: false,
   moon: false,
+  supernova: false,
 };
 
 /** The URL param name for each layer, in a stable display order. */
@@ -54,6 +58,7 @@ export const RECIPE_PARAMS = {
   zoom: "zoom",
   aurora: "aurora",
   moon: "moon",
+  supernova: "supernova",
 } as const;
 
 /** Read one boolean layer param; missing / non-"on" values are `false`. */
@@ -77,6 +82,7 @@ export function parseRecipe(params: URLSearchParams): GalaxyRecipe {
     zoomMode: parseLayer(params, RECIPE_PARAMS.zoom),
     aurora: parseLayer(params, RECIPE_PARAMS.aurora),
     moon: parseLayer(params, RECIPE_PARAMS.moon),
+    supernova: parseLayer(params, RECIPE_PARAMS.supernova),
   };
 }
 
@@ -96,6 +102,7 @@ export function recipeToParams(recipe: Partial<GalaxyRecipe>): URLSearchParams {
   if (recipe.zoomMode) p.set(RECIPE_PARAMS.zoom, "on");
   if (recipe.aurora) p.set(RECIPE_PARAMS.aurora, "on");
   if (recipe.moon) p.set(RECIPE_PARAMS.moon, "on");
+  if (recipe.supernova) p.set(RECIPE_PARAMS.supernova, "on");
   return p;
 }
 
@@ -115,6 +122,7 @@ export function resolveRecipe(partial: Partial<GalaxyRecipe>): GalaxyRecipe {
     zoomMode: partial.zoomMode ?? DEFAULT_RECIPE.zoomMode,
     aurora: partial.aurora ?? DEFAULT_RECIPE.aurora,
     moon: partial.moon ?? DEFAULT_RECIPE.moon,
+    supernova: partial.supernova ?? DEFAULT_RECIPE.supernova,
   };
 }
 
@@ -144,6 +152,7 @@ export function describeRecipe(recipe: GalaxyRecipe): string {
     on("Zoom", recipe.zoomMode),
     on("Aurora", recipe.aurora),
     on("Moon", recipe.moon),
+    on("Supernovae", recipe.supernova),
   ].filter(Boolean) as string[];
   return parts.length ? parts.join(", ") : "Default galaxy";
 }
