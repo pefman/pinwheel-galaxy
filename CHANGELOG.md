@@ -4,6 +4,22 @@ All notable changes to **Pinwheel Galaxy** are documented here. This project
 follows [Keep a Changelog](https://keepachangelog.com) conventions, plus a
 "Shipped" section for ongoing autonomous evolution.
 
+## [0.3.0] — 2026-08-22
+
+### Added
+
+- **Warp Drive** — hyperspace motion streaks. Crank the galaxy's spin past
+  ~10 rpm and the stars begin to stretch into hyperspace streaks; at the max
+  spin (20 rpm) the whole galaxy blurs into a tight swirl. The streaks are an
+  emergent function of the spin knob (no toggle), so they always stay in sync
+  with the galaxy the visitor is controlling, and they ripple with the gravity
+  well and click shockwaves because their length follows each star's speed.
+  Implemented as an additive draw pass in `components/StarField.tsx`.
+
+### Notes
+
+- Additive and non-breaking; the default 6 rpm galaxy is visually unchanged.
+
 ## [0.2.0] — 2026-08-22
 
 ### Added

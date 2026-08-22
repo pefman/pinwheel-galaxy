@@ -35,6 +35,12 @@ const CONSTELLATION_MAX_DIST = 96; // px — two stars link when closer than thi
 const CONSTELLATION_MIN_ALPHA = 0.06;
 const CONSTELLATION_MAX_ALPHA = 0.32;
 
+// Warp Drive: crank the galaxy's spin fast enough and the stars start to
+// stretch into hyperspace motion streaks. This gives the "Spin" knob a real,
+// visible payoff — the faster the galaxy rotates, the deeper the warp.
+const WARP_RPM_THRESHOLD = 10; // rpm at which streaks first appear
+const WARP_RPM_RANGE = 20 - WARP_RPM_THRESHOLD; // 20 is the max rpm
+
 interface Star {
   radius: number; // orbit radius from galaxy centre (px)
   angle: number; // base angle on its spiral arm
@@ -145,6 +151,11 @@ export default function StarField({
     let stars: Star[] = [];
     let raf = 0;
     let last = 0;
+    // Warp Drive strength: 0 (calm) -> 1 (full warp), driven by the spin knob.
+    const warpFactor =
+      config.rpm > WARP_RPM_THRESHOLD
+        ? (config.rpm - WARP_RPM_THRESHOLD) / WARP_RPM_RANGE
+        : 0;
     const mouse = { x: -9999, y: -9999, active: false };
     const pulses: Pulse[] = [];
     let galaxyAngle = 0;
@@ -291,6 +302,39 @@ export default function StarField({
             ctx.lineTo(b.x, b.y);
             ctx.stroke();
           }
+        }
+      }
+
+      // Warp Drive: stretch fast-moving stars into hyperspace streaks. The
+      // streak length scales with both the star's speed and the global warp
+      // factor, so the streaks ripple with the gravity well and shockwaves.
+      if (warpFactor > 0) {
+        for (const s of stars) {
+          const speed = Math.hypot(s.vx, s.vy);
+          if (speed < 2) continue;
+          const len = Math.min(70, speed * 0.45 + warpFactor * 26);
+          const nx = s.vx / speed;
+          const ny = s.vy / speed;
+          const glow = Math.min(1, speed / 40);
+          const alpha = 0.15 + glow * 0.35 + warpFactor * 0.2;
+          const grad = ctx.createLinearGradient(
+            s.x - nx * len,
+            s.y - ny * len,
+            s.x + nx * len,
+            s.y + ny * len,
+          );
+          grad.addColorStop(0, `hsla(${s.hue}, 90%, 60%, 0)`);
+          grad.addColorStop(
+            0.5,
+            `hsla(${s.hue}, 95%, ${72 + glow * 15}%, ${alpha})`,
+          );
+          grad.addColorStop(1, `hsla(${s.hue}, 90%, 60%, 0)`);
+          ctx.strokeStyle = grad;
+          ctx.lineWidth = s.size * (1 + glow);
+          ctx.beginPath();
+          ctx.moveTo(s.x - nx * len, s.y - ny * len);
+          ctx.lineTo(s.x + nx * len, s.y + ny * len);
+          ctx.stroke();
         }
       }
 
