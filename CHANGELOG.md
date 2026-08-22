@@ -4,6 +4,35 @@ All notable changes to **Pinwheel Galaxy** are documented here. This project
 follows [Keep a Changelog](https://keepachangelog.com) conventions, plus a
 "Shipped" section for ongoing autonomous evolution.
 
+## [0.8.0] — 2026-08-22
+
+### Added
+
+- **Variable Stars** — an opt-in "living sky" enrichment. When enabled, a
+  fraction of the stars brighten and dim on their own slow light curves
+  (Cepheid-style sinusoids with an individual period, phase and amplitude),
+  and a small rare subset are *giants* — drawn larger and softer, and also
+  breathing on a deeper curve. The effect is applied purely in the star draw
+  pass, so it never touches the gravity-well spring physics, warp streaks,
+  nebula, constellations, meteors, zoom or Stellar Depth — it is fully
+  orthogonal and **off by default** (every multiplier is exactly 1 when off).
+  - `lib/variableStars.ts` (new) — the **pure** logic: a deterministic
+    `mulberry32` PRNG, `assignVariableStars` (a stable per-star profile per
+    seed), `variableBrightness` (the bounded sinusoid), and the
+    `variableAlpha` / `variableSize` accessors. `lib/variableStars.test.ts`
+    (new, 12 tests) covers determinism, range, giant/variable fractions,
+    light-curve bounds/periodicity/phase, and seed sensitivity.
+  - `components/StarField.tsx` gained a `variableMode` prop, builds the
+    per-star profiles in `resize()`, and applies `variableAlpha` to each star's
+    alpha and `variableSize` to giants' radius in the draw pass.
+  - `app/page.tsx` gained a **Variable Stars: On/Off** chip in the dock.
+
+### Notes
+
+- Additive and non-breaking; the default galaxy (toggle off) is visually
+  unchanged. Built, locally verified (`npm run build` + `npm test` 45/45), and
+  deployed to Vercel production.
+
 ## [0.7.0] — 2026-08-22
 
 ### Added

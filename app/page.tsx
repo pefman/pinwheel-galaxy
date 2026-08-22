@@ -38,6 +38,7 @@ export default function Home() {
   const [shooting, setShooting] = useState(false);
   const [zoomEnabled, setZoomEnabled] = useState(false);
   const [depth, setDepth] = useState(false);
+  const [variable, setVariable] = useState(false);
 
   return (
     <main className="relative min-h-screen overflow-hidden">
@@ -90,6 +91,7 @@ export default function Home() {
           shooting={shooting}
           zoomEnabled={zoomEnabled}
           depthMode={depth}
+          variableMode={variable}
           onZoom={setZoom}
         />
 
