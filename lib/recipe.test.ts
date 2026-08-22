@@ -60,6 +60,7 @@ test("parseRecipe and recipeToParams round-trip", () => {
     comet: true,
     zoomMode: true,
     aurora: false,
+    moon: false,
   };
   const qs = recipeToParams(recipe);
   assert.deepEqual(parseRecipe(qs), recipe);
@@ -94,6 +95,7 @@ test("RECIPE_PARAMS covers every layer exactly once", () => {
     "comet",
     "zoom",
     "aurora",
+    "moon",
   ]);
 });
 

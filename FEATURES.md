@@ -5,6 +5,97 @@ additive and dated. New features are added here every evolution cycle.
 
 ---
 
+## Lunar Transit — a Drifting, Waxing/Waning Moon
+
+- **Date added:** 2026-08-22
+- **Version:** 0.15.0
+- **Status:** Shipped & live on Vercel — https://pinwheel-galaxy.vercel.app
+
+### What + why
+
+The night sky in Pinwheel Galaxy has always been full of *movement* — comets,
+meteors, drifting nebula, a swaying aurora — but it was missing a single,
+recognisable **body**. A real night sky has a moon that drifts across it and
+waxes and wanes through a full cycle, and that absence was the clearest gap in
+the atmosphere. Lunar Transit adds a slow-drifting moon with a real terminator
+(phase), faint craters, and a soft sun-lit glow. It is purely cosmetic,
+additive, and **off by default**, so the default galaxy looks exactly as
+before — and it is distinct from every other layer: it is one static-in-shape
+body on its own clock, not a field of points or a sky-wide ribbon.
+
+### How it works (high-level)
+
+- `lib/moon.ts` (new) holds the **pure** logic, unit-tested (`lib/moon.test.ts`,
+  10 tests):
+  - `computeMoon({ time, width, height })` returns a fully specified
+    `MoonState` — `{ x, y, radius, craters, litFraction, litSide, phaseLabel }`.
+    The moon's position drifts linearly across the sky on a 4-minute (240 s)
+    `TRANSIT_PERIOD`, so it rises from the left edge and sets on the right over
+    the course of a session; craters are placed by a fixed `mulberry32` seed so
+    the same moon always has the same face.
+  - The **phase** comes from a `monthT` clock (`monthT = (time % MONTH) /
+    MONTH`, a 4-minute cycle) via `litFraction = 0.5 + 0.5·cos(2π·monthT)`,
+    which sweeps 0→1→0 (new → full → new). The lit side flips at each full moon
+    (`litSide = monthT < 0.5 ? -1 : 1`), so waxing lights the right limb and
+    waning lights the left — astronomically correct.
+  - The terminator is a **true half-ellipse**, not a circle: its signed
+    semi-minor axis is `terminatorXRadius(radius, litFraction) = radius·(1−2·
+    litFraction)`. This is the exact relationship that makes the drawn lit area
+    equal `litFraction` of the disk (verified numerically: area matches
+    `litFraction·π·r²` to 4 decimals at every phase). `describeMoonPhase`
+    maps the fraction to a human label (new → waxing crescent → first quarter →
+    waxing gibbous → full → waning gibbous → last quarter → waning crescent).
+- `components/StarField.tsx` gained an opt-in `moonMode` prop. A `moonTime`
+  clock advances each frame, the moon's geometry is recomputed from that clock
+  every frame (cheap arithmetic) so it drifts and wanes smoothly, and the draw
+  pass paints, **behind the stars** (like nebula, meteors and the aurora):
+  a soft outer glow halo, the full disk base (what the dark side shows faintly
+  as earthshine), the seeded craters clipped to the disk, and the lit region —
+  a semicircle on the lit limb closed by the terminator half-ellipse, mirrored
+  on x for waxing vs waning. It touches the draw pass only, so it is fully
+  orthogonal to gravity, warp, nebula, constellations, meteors, variable stars,
+  Stellar Depth, zoom, the comet and the aurora.
+- `lib/recipe.ts` gained a shareable `?moon=` layer toggle (off by default, so a
+  calm galaxy keeps a tidy URL) and it is surfaced in `describeRecipe`.
+- `app/page.tsx` wires `moonMode={recipe.moon}` and adds a **Moon** chip to the
+  Galaxy Dock's environment row.
+
+### Key files / components
+
+- `lib/moon.ts` (new) and `lib/moon.test.ts` (new, 10 tests).
+- `components/StarField.tsx` — new `moonMode` prop, moon clock, and the
+  behind-the-stars moon draw (glow, disk, craters, lit region).
+- `lib/recipe.ts` — the shareable `?moon=` layer toggle.
+- `app/page.tsx` — the **Moon** toggle chip.
+
+### User-facing behavior
+
+- Toggle **Moon: On** and watch — a single moon rises from the left edge of the
+  sky, drifts slowly across, and waxes and wanes through a full cycle: waxing
+  crescent → first quarter → gibbous → full → gibbous → last quarter → waning
+  crescent → new, lighting the right limb while waxing and the left while
+  waning. It sits behind the galaxy and stars. Every other toggle, knob and the
+  gravity well keep working exactly as before.
+
+### How to test / try it
+
+1. `npm install` → `npm run build` → `npm start`; toggle **Moon: On** and watch
+  the moon rise, drift and wane over a few minutes. Add `?moon=on` to the URL to
+  share.
+2. Toggle it off — the sky goes back to the star-only field; nothing else
+  changes.
+3. `npm test` — 10 new tests cover determinism, the new→full→new sweep, the
+  lit-side flip, the terminator's half-ellipse extent, lit-area matching the
+  fraction, label correctness, and the 240 s transit period.
+
+### Known limitations / follow-ups
+
+- The moon is one fixed face (one crater seed); a follow-up could rotate the
+  face slowly or show two moons.
+- The phase cycle is 4 minutes (matching the drift transit) rather than a real
+  ~29.5-day month — intentional, so a visitor sees a full cycle in a single
+  session.
+
 ## Aurora — a Northern-Lights Sky Layer
 
 - **Date added:** 2026-08-22
