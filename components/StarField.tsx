@@ -16,6 +16,10 @@
  *   pixel ratio is capped, and the canvas resizes on viewport changes.
  * - Accessibility: when `prefers-reduced-motion` is set, gravitational
  *   interactivity is disabled and stars only drift with the galaxy spin.
+ * - Galaxy Zoom (opt-in via `zoomEnabled`): wheel / trackpad / two-finger
+ *   pinch gestures dolly into the starfield. The galaxy is rendered inside a
+ *   `zoom`-scaled transform around its centre while its stars are drawn at
+ *   `1 / zoom`, so it approaches the viewer instead of bloating.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -28,6 +32,14 @@ import {
   computeShootingStars,
   ShootingStar,
 } from "@/lib/shootingStars";
+import {
+  ZOOM_DEFAULT,
+  ZOOM_EASE,
+  easeZoom,
+  screenSizeScale,
+  applyZoomMultiplier,
+  wheelDeltaToMultiplier,
+} from "@/lib/zoom";
 
 const SPRING_K = 0.02; // how strongly stars return to their orbit
 const DAMPING = 0.86; // velocity damping per frame
@@ -138,12 +150,17 @@ export default function StarField({
   constellation = false,
   nebula = false,
   shooting = false,
+  zoomEnabled = false,
+  onZoom,
 }: {
   active: boolean;
   config?: GalaxyConfig;
   constellation?: boolean;
   nebula?: boolean;
   shooting?: boolean;
+  zoomEnabled?: boolean;
+  /** Called with the live zoom whenever it changes, so the parent can share it. */
+  onZoom?: (zoom: number) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reduced = useReducedMotion();
@@ -176,6 +193,14 @@ export default function StarField({
     const nebulaParallax = { x: 0, y: 0 };
     // Shooting Stars: a running clock for the deterministic spawn timeline.
     let shootingTime = 0;
+    // Galaxy Zoom: the visible zoom and its animated target. The scene is
+    // scaled by `zoom` while stars are drawn at `1 / zoom`, so the galaxy
+    // dollys in instead of bloating into blurry blobs.
+    let zoom = ZOOM_DEFAULT;
+    let targetZoom = ZOOM_DEFAULT;
+    let lastPinchDist = 0;
+    let lastTap = 0;
+    let lastZoomBroadcast: number | undefined;
 
     const resize = () => {
       dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
@@ -213,6 +238,41 @@ export default function StarField({
       mouse.y = -9999;
     };
 
+    // Galaxy Zoom: wheel / trackpad scroll zooms in and out, clamped and eased.
+    const onWheel = (e: WheelEvent) => {
+      if (!zoomEnabled) return;
+      // Prevent the page from scrolling while zooming with the wheel.
+      e.preventDefault();
+      targetZoom = applyZoomMultiplier(targetZoom, wheelDeltaToMultiplier(e.deltaY));
+    };
+    // Two-finger pinch zoom on touch. The ratio of the new touch span to the
+    // old one is the multiplier, exactly like a trackpad two-finger scroll.
+    const onTouchStart = (e: TouchEvent) => {
+      if (zoomEnabled && e.touches.length === 2) {
+        const [a, b] = e.touches;
+        lastPinchDist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      }
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (!zoomEnabled || e.touches.length !== 2) return;
+      const [a, b] = e.touches;
+      const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      if (lastPinchDist > 0) {
+        targetZoom = applyZoomMultiplier(targetZoom, dist / lastPinchDist);
+      }
+      lastPinchDist = dist;
+    };
+    const onTouchEnd = () => {
+      lastPinchDist = 0;
+      // Double-tap (like double-click) resets the zoom to 1×.
+      const now = Date.now();
+      if (now - lastTap < 300) targetZoom = ZOOM_DEFAULT;
+      lastTap = now;
+    };
+    const onDoubleClick = () => {
+      targetZoom = ZOOM_DEFAULT;
+    };
+
     const frame = (now: number) => {
       const dt = last ? Math.min((now - last) / 1000, 0.05) : 1 / 60;
       last = now;
@@ -222,6 +282,17 @@ export default function StarField({
 
       const cx = w / 2;
       const cy = h / 2;
+
+      // Galaxy Zoom: ease the visible zoom toward its target and broadcast
+      // the live value so the parent can share it via the URL.
+      if (zoomEnabled) {
+        const prev = zoom;
+        zoom = easeZoom(zoom, targetZoom, ZOOM_EASE);
+        if (lastZoomBroadcast === undefined || Math.abs(zoom - prev) > 1e-4) {
+          lastZoomBroadcast = zoom;
+          onZoom?.(zoom);
+        }
+      }
 
       for (const s of stars) {
         // Desired orbital position in screen space.
@@ -387,6 +458,21 @@ export default function StarField({
         ctx.stroke();
       }
 
+      // Galaxy Zoom: the galaxy dollys in. Everything that belongs to the
+      // galaxy — the constellation web, the warp streaks and the stars — is
+      // rendered inside a transform scaled by `zoom` around the centre, while
+      // its geometry is drawn at `1 / zoom` so it holds a constant on-screen
+      // size: the galaxy comes towards you instead of bloating into blobs.
+      // Atmosphere outside this box (nebula, meteors, click pulses) stays put
+      // at screen scale.
+      const starScale = screenSizeScale(zoom);
+      if (zoomEnabled && zoom !== ZOOM_DEFAULT) {
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.scale(zoom, zoom);
+        ctx.translate(-cx, -cy);
+      }
+
       // Constellation mode: draw faint links between nearby stars.
       if (constellation) {
         for (let i = 0; i < stars.length; i++) {
@@ -411,7 +497,7 @@ export default function StarField({
               0.6,
               alpha,
             )})`;
-            ctx.lineWidth = 0.6 + proximity * 0.9;
+            ctx.lineWidth = (0.6 + proximity * 0.9) * starScale;
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
             ctx.lineTo(b.x, b.y);
@@ -445,7 +531,7 @@ export default function StarField({
           );
           grad.addColorStop(1, `hsla(${s.hue}, 90%, 60%, 0)`);
           ctx.strokeStyle = grad;
-          ctx.lineWidth = s.size * (1 + glow);
+          ctx.lineWidth = s.size * (1 + glow) * starScale;
           ctx.beginPath();
           ctx.moveTo(s.x - nx * len, s.y - ny * len);
           ctx.lineTo(s.x + nx * len, s.y + ny * len);
@@ -458,12 +544,16 @@ export default function StarField({
         const glow = Math.min(1, speed / 40);
         const alpha = s.baseAlpha + glow * 0.4;
         ctx.beginPath();
-        const grad = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.size * (2 + glow));
+        const grad = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.size * (2 + glow) * starScale);
         grad.addColorStop(0, `hsla(${s.hue}, 90%, ${70 + glow * 20}%, ${alpha})`);
         grad.addColorStop(1, `hsla(${s.hue}, 90%, 60%, 0)`);
         ctx.fillStyle = grad;
-        ctx.arc(s.x, s.y, s.size * (2 + glow), 0, Math.PI * 2);
+        ctx.arc(s.x, s.y, s.size * (2 + glow) * starScale, 0, Math.PI * 2);
         ctx.fill();
+      }
+
+      if (zoomEnabled && zoom !== ZOOM_DEFAULT) {
+        ctx.restore();
       }
 
       raf = requestAnimationFrame(frame);
@@ -473,8 +563,11 @@ export default function StarField({
     window.addEventListener("mousemove", onMove, { passive: true });
     window.addEventListener("mouseleave", leave);
     window.addEventListener("click", onClick);
-    window.addEventListener("touchmove", onTouch, { passive: true });
-    window.addEventListener("touchend", touchEnd);
+    window.addEventListener("wheel", onWheel, { passive: false });
+    window.addEventListener("dblclick", onDoubleClick);
+    canvas.addEventListener("touchstart", onTouchStart, { passive: true });
+    canvas.addEventListener("touchmove", onTouchMove, { passive: false });
+    canvas.addEventListener("touchend", onTouchEnd);
     window.addEventListener("resize", resize);
     raf = requestAnimationFrame(frame);
 
@@ -483,11 +576,14 @@ export default function StarField({
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseleave", leave);
       window.removeEventListener("click", onClick);
-      window.removeEventListener("touchmove", onTouch);
-      window.removeEventListener("touchend", touchEnd);
+      window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("dblclick", onDoubleClick);
+      canvas.removeEventListener("touchstart", onTouchStart);
+      canvas.removeEventListener("touchmove", onTouchMove);
+      canvas.removeEventListener("touchend", onTouchEnd);
       window.removeEventListener("resize", resize);
     };
-  }, [active, reduced, config, nebula, shooting]);
+  }, [active, reduced, config, nebula, shooting, zoomEnabled, onZoom]);
 
   return (
     <canvas

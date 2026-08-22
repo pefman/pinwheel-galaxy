@@ -4,6 +4,38 @@ All notable changes to **Pinwheel Galaxy** are documented here. This project
 follows [Keep a Changelog](https://keepachangelog.com) conventions, plus a
 "Shipped" section for ongoing autonomous evolution.
 
+## [0.6.0] — 2026-08-22
+
+### Added
+
+- **Galaxy Zoom** — scroll with the wheel / trackpad (or pinch with two
+  fingers on touch) to dolly into the interactive starfield. The galaxy eases
+  smoothly toward the target, clamped between 0.6× and 2.5×, and a double-click
+  (or double-tap) snaps back to 1×. Stars are drawn at `1 / zoom` while the
+  scene is scaled by `zoom`, so the galaxy *comes towards you* instead of
+  bloating into blurry blobs. The effect is **off by default** and orthogonal
+  to every other feature; when off, the wheel scrolls the page as usual. The
+  live zoom is shareable via `?z=` in the URL.
+  - `lib/zoom.ts` (new) — the **pure** logic: `clampZoom`, `easeZoom`,
+    `screenSizeScale`, the wheel/pinch multiplier maths, and the `?z=` URL
+    binding. `lib/zoom.test.ts` (new) covers clamping, wheel direction,
+    easing convergence, constant-on-screen sizing, and URL round-trips.
+  - `components/StarField.tsx` gained a `zoomEnabled` prop and an `onZoom`
+    callback, owns the animated zoom state, and renders the galaxy
+    (constellation web, warp streaks, stars) inside a `zoom`-scaled transform
+    around the galaxy centre. Atmosphere outside the galaxy (nebula, meteors,
+    click pulses) stays at screen scale.
+  - `lib/useGalaxyParams.ts` now carries the `?z=` zoom param alongside theme /
+    arms / rpm / stars and gravity, so a zoomed galaxy is deep-linkable and
+    survives Back/Forward navigation.
+  - `app/page.tsx` — a new **Zoom: On/Off** toggle in the hero control row.
+
+### Notes
+
+- All changes are additive and non-breaking; the default galaxy is visually
+  unchanged. Galaxy Zoom is off by default and orthogonal to Gravity Well,
+  Constellation, Warp Drive, Nebula Drift, and Shooting Stars.
+
 ## [0.5.0] — 2026-08-22
 
 ### Added

@@ -20,8 +20,10 @@ import {
   configToParams,
   parseConfigFromParams,
 } from "./galaxyPresets";
+import { ZOOM_DEFAULT, paramsToZoom } from "./zoom";
 
 const GRAVITY_PARAM = "gravity";
+const ZOOM_PARAM = "z";
 
 export function useGalaxyParams() {
   const search =
@@ -37,26 +39,40 @@ export function useGalaxyParams() {
     if (raw === null) return true;
     return raw !== "0" && raw !== "false";
   });
+  // Galaxy Zoom: read the shareable `?z=` param on mount.
+  const [zoom, setZoomState] = useState<number>(() =>
+    paramsToZoom(new URLSearchParams(search).get(ZOOM_PARAM)) ?? ZOOM_DEFAULT,
+  );
 
   // Re-read the URL on Back/Forward navigation.
   useEffect(() => {
     const onPop = () => {
-      setConfig(parseConfigFromParams(new URLSearchParams(window.location.search)));
-      const raw = new URLSearchParams(window.location.search).get(GRAVITY_PARAM);
+      const usp = new URLSearchParams(window.location.search);
+      setConfig(parseConfigFromParams(usp));
+      const raw = usp.get(GRAVITY_PARAM);
       setGravity(raw === null ? true : raw !== "0" && raw !== "false");
+      setZoomState(paramsToZoom(usp.get(ZOOM_PARAM)) ?? ZOOM_DEFAULT);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
-  // Keep the visible URL in sync whenever config/gravity changes programmatically.
+  // Keep the visible URL in sync whenever config/gravity/zoom change.
   useEffect(() => {
-    const params = configToParams(config);
-    params.set(GRAVITY_PARAM, gravity ? "1" : "0");
-    const query = params.toString();
+    const usp = new URLSearchParams(window.location.search);
+    usp.set("theme", config.theme);
+    usp.set("arms", String(config.arms));
+    usp.set("rpm", String(config.rpm));
+    usp.set("stars", String(config.stars));
+    usp.set(GRAVITY_PARAM, gravity ? "1" : "0");
+    usp.set(ZOOM_PARAM, zoom.toFixed(2));
+    const query = usp.toString();
     const url = `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`;
     window.history.replaceState({}, "", url);
-  }, [config, gravity]);
+  }, [config, gravity, zoom]);
+
+  // Public setter: the starfield calls this with the live zoom; we persist it.
+  const setZoom = useCallback((z: number) => setZoomState(z), []);
 
   const applyConfig = useCallback((partial: Partial<GalaxyConfig>) => {
     setConfig((prev) => ({ ...prev, ...partial }));
@@ -74,5 +90,14 @@ export function useGalaxyParams() {
     return usp.size > 0 ? configToParams(config).toString() : null;
   }, [config]);
 
-  return { config, gravity, applyConfig, shuffle, toggleGravity, shareQuery: label };
+  return {
+    config,
+    gravity,
+    zoom,
+    applyConfig,
+    shuffle,
+    toggleGravity,
+    setZoom,
+    shareQuery: label,
+  };
 }
