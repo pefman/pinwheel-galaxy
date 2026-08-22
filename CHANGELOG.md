@@ -4,6 +4,38 @@ All notable changes to **Pinwheel Galaxy** are documented here. This project
 follows [Keep a Changelog](https://keepachangelog.com) conventions, plus a
 "Shipped" section for ongoing autonomous evolution.
 
+## [0.10.0] — 2026-08-22
+
+### Added
+
+- **Shareable Galaxy Recipes** — the URL now captures the state of *every*
+  interactive layer, not just the spiral config. A shared link re-hydrates the
+  exact galaxy a visitor was looking at: nebula, constellations, meteors, depth,
+  variable stars, comet and the Zoom mode — all included, so you can finally
+  share your full creation, not just its colour and arms. The base
+  `galaxyPresets` system already made `?theme=&arms=&rpm=&stars=` shareable;
+  this layer adds `?nebula=&constellation=&meteors=&depth=&variable=&comet=&zoom=`
+  on top. Every layer defaults to **off**, so a plain galaxy still produces a
+  tidy URL with no extra params, and the default galaxy is visually unchanged.
+  - `lib/recipe.ts` (new) — the **pure** recipe model: `parseRecipe` (reads the
+    layer toggles, missing → off), `recipeToParams` (writes only the on-layers),
+    `resolveRecipe`, `toggleLayer` and `describeRecipe`. `lib/recipe.test.ts`
+    (new, 9 tests) covers parse/build, the off-is-default rule, the tidy-URL
+    behaviour, round-tripping, and the toggle.
+  - `lib/useGalaxyParams.ts` now owns the recipe state, persists every layer
+    toggle into the URL via `history.pushState`, and re-reads it on Back/Forward
+    (`popstate`) — the recipe is part of the URL's source of truth alongside the
+    config, gravity and zoom.
+  - `app/page.tsx` drives every dock toggle from `recipe` + a single `toggle()`
+    setter instead of seven local `useState`s, so all layer state round-trips
+    through the URL in one place.
+
+### Notes
+
+- Additive and non-breaking; with no layer toggles the URL is unchanged and the
+  default galaxy looks exactly as before. Built, locally verified (`npm run
+  build` + `npm test` 70/70), and deployed to Vercel production.
+
 ## [0.9.0] — 2026-08-22
 
 ### Added

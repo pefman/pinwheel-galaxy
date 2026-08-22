@@ -5,6 +5,68 @@ additive and dated. New features are added here every evolution cycle.
 
 ---
 
+## Shareable Galaxy Recipes — Full-State Deep Links
+
+- **Date added:** 2026-08-22
+- **Version:** 0.10.0
+- **Status:** Shipped & live on Vercel — https://pinwheel-galaxy.vercel.app
+
+### What + why
+
+The base **Galaxy Presets** (v0.2.0) made the spiral *config* shareable
+(`?theme=&arms=&rpm=&stars=`), but the seven interactive **layers** — Nebula,
+Constellations, Shooting Stars, Zoom, Depth, Variable Stars, Comet — lived only
+in page state. Copy the URL and everyone else got your galaxy *without* the
+layers you had turned on. Recipes close that gap: the URL now encodes the state
+of every layer, so a shared link re-hydrates the exact galaxy you were looking
+at. It is the natural completion of the presets system.
+
+### How it works (high-level)
+
+- `lib/recipe.ts` (new) holds the **pure** recipe model: `parseRecipe` (reads
+  layer toggles, missing → off, never throws), `recipeToParams` (writes only the
+  on-layers, so a plain galaxy keeps a tidy empty query), plus `resolveRecipe`,
+  `toggleLayer` and `describeRecipe`.
+- `lib/useGalaxyParams.ts` now **owns** the recipe state, persists every layer
+  toggle into the URL via `history.pushState`, and re-reads it on `popstate`
+  (Back/Forward) — the recipe is part of the URL's source of truth.
+- `app/page.tsx` drives all seven dock toggles from `recipe` + a single
+  `toggle()` setter instead of seven local `useState`s.
+- Layer params sit alongside the existing config/gravity/zoom params, e.g.
+  `?theme=aurora&arms=5&nebula=on&constellation=on&comet=on`.
+
+### Key files / components
+
+- `lib/recipe.ts` (new) and `lib/recipe.test.ts` (new, 9 tests).
+- `lib/useGalaxyParams.ts` — recipe state, URL persistence, `popstate` re-read.
+- `app/page.tsx` — dock toggles driven by `recipe` + `toggle()`.
+
+### User-facing behavior
+
+- Toggle any layer **On**, copy the URL, open it elsewhere — the galaxy re-creates
+  with that layer on.
+- Back/Forward re-hydrates the recipe from the URL, like the base config.
+- With no layers on, the URL is unchanged — no `?nebula=off` noise.
+
+### How to test / try it
+
+1. `npm install` → `npm run build` → `npm start`; toggle **Nebula: On** and
+   **Comet: On**, then copy the address bar.
+2. Open the copied URL in a fresh tab — the nebula and comet are on, and the base
+   config matches too.
+3. Toggle a layer off — its param drops out of the URL.
+4. `npm test` — 9 new tests cover parse/build, off-is-default, tidy-URL,
+   round-trip, and toggle.
+
+### Known limitations / follow-ups
+
+- The recipe captures toggle state (on/off), not per-layer *tuning* — as layers
+  gain intensity knobs, those can be added to the recipe. Toggle state lives in
+  the URL now, so a reload restores it; a "remember my last session" cookie is a
+  possible follow-up.
+
+---
+
 ## Comet Trail — a Cursor-Following Comet
 
 - **Date added:** 2026-08-22
