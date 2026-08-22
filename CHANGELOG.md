@@ -4,6 +4,20 @@ All notable changes to **Pinwheel Galaxy** are documented here. This project
 follows [Keep a Changelog](https://keepachangelog.com) conventions, plus a
 "Shipped" section for ongoing autonomous evolution.
 
+## [0.2.0] — 2026-08-22
+
+### Added
+- **Constellation Mode** — an optional toggle that connects nearby stars with a
+  living web of faint cyan links. Links form between stars within a threshold
+  distance and brighten where the stars are moving fastest, so the web ripples
+  with the gravity well and to click shockwaves. Implemented as an additive draw
+  pass in `components/StarField.tsx`; controlled by a new "Constellations: On/Off"
+  toggle in the hero control bar.
+
+### Notes
+- Additive and non-breaking; orthogonal to the existing Gravity Well toggle.
+- Built, locally verified (HTTP 200), and deployed to Vercel production.
+
 ## [0.1.0] — 2026-08-22
 
 ### Added

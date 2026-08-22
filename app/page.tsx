@@ -5,6 +5,7 @@ import StarField from "@/components/StarField";
 
 export default function Home() {
   const [gravity, setGravity] = useState(true);
+  const [constellations, setConstellations] = useState(false);
 
   return (
     <main className="relative min-h-screen overflow-hidden">
@@ -31,7 +32,7 @@ export default function Home() {
 
       {/* Hero with the interactive starfield */}
       <section className="relative flex min-h-screen items-center justify-center px-6">
-        <StarField active={gravity} />
+        <StarField active={gravity} constellation={constellations} />
 
         <div className="relative z-10 max-w-3xl text-center">
           <p className="animate-fade-up opacity-0 animation-delay-100 text-sm font-medium uppercase tracking-[0.3em] text-cosmos-cyan">
@@ -58,7 +59,7 @@ export default function Home() {
 
         {/* Gravity-well control */}
         <div className="absolute bottom-6 left-1/2 z-20 -translate-x-1/2">
-          <div className="glass flex items-center gap-3 rounded-full px-4 py-2 text-sm">
+          <div className="glass flex flex-wrap items-center justify-center gap-3 rounded-full px-4 py-2 text-sm">
             <span className="px-1 text-white/60">Move your cursor • click to pulse</span>
             <button
               onClick={() => setGravity((g) => !g)}
@@ -69,6 +70,20 @@ export default function Home() {
               style={{ backgroundColor: gravity ? "rgba(124,58,237,0.7)" : "rgba(255,255,255,0.1)" }}
             >
               Gravity Well: {gravity ? "On" : "Off"}
+            </button>
+            <button
+              onClick={() => setConstellations((c) => !c)}
+              aria-pressed={constellations}
+              className={`relative rounded-full px-3 py-1 font-medium transition-colors ${
+                constellations ? "text-white" : "text-white/40"
+              }`}
+              style={{
+                backgroundColor: constellations
+                  ? "rgba(56,189,248,0.7)"
+                  : "rgba(255,255,255,0.1)",
+              }}
+            >
+              Constellations: {constellations ? "On" : "Off"}
             </button>
           </div>
         </div>
