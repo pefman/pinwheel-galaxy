@@ -5,6 +5,31 @@ import StarField from "@/components/StarField";
 import GalaxyDock from "@/components/GalaxyDock";
 import { useGalaxyParams } from "@/lib/useGalaxyParams";
 
+// "Report a bug" sends visitors straight to a pre-filled GitHub issue so bugs
+// land in the tracker where the autopilot picks them up. The body is a small
+// template that guides the reporter without letting them dictate the fix.
+const BUG_REPORT_URL = (() => {
+  const base = "https://github.com/pefman/pinwheel-galaxy/issues/new";
+  const params = new URLSearchParams();
+  params.set("title", "[Bug] ");
+  params.set(
+    "body",
+      "**Describe the bug**\n" +
+        "A clear and concise description of what is wrong.\n\n" +
+        "**To reproduce**\n" +
+        "1. Go to '...'\n" +
+        "2. Click on '...'\n" +
+        "3. See error\n\n" +
+        "**Expected behaviour**\n" +
+        "What you expected to happen.\n\n" +
+        "**Environment**\n" +
+        "- Browser:\n" +
+        "- Device / viewport:\n" +
+        "- Screenshot (if applicable):",
+  );
+  return `${base}?${params.toString()}`;
+})();
+
 export default function Home() {
   const { config, gravity, applyConfig, toggleGravity, shuffle, shareQuery } =
     useGalaxyParams();
@@ -29,6 +54,25 @@ export default function Home() {
             className="transition-colors hover:text-white"
           >
             Source
+          </a>
+          <a
+            href={BUG_REPORT_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 transition-colors hover:text-white"
+          >
+            <svg
+              aria-hidden="true"
+              className="h-4 w-4 fill-current"
+              viewBox="0 0 16 16"
+            >
+              <path d="8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z" />
+              <path
+                fill-rule="evenodd"
+                d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Z"
+              />
+            </svg>
+            Report a bug
           </a>
         </div>
       </nav>
@@ -117,7 +161,17 @@ export default function Home() {
       </section>
 
       <footer className="border-t border-white/10 px-6 py-10 text-center text-sm text-white/40">
-        Built and evolved inside a Multica workspace · Pinwheel Galaxy
+        <div className="flex flex-col items-center gap-2">
+          <span>Built and evolved inside a Multica workspace · Pinwheel Galaxy</span>
+          <a
+            href={BUG_REPORT_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="transition-colors hover:text-white/70"
+          >
+            Report a bug →
+          </a>
+        </div>
       </footer>
     </main>
   );

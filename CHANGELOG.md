@@ -4,6 +4,19 @@ All notable changes to **Pinwheel Galaxy** are documented here. This project
 follows [Keep a Changelog](https://keepachangelog.com) conventions, plus a
 "Shipped" section for ongoing autonomous evolution.
 
+## [0.4.0] — 2026-08-22
+
+### Added
+
+- **Bug Report Link** — a "Report a bug" link in the nav bar and footer that
+  opens a pre-filled GitHub new-issue page (`[Bug]` title + structured body
+  template). Feedback now lands directly in the issue tracker, feeding the
+  autonomous bug-fixing feedback loop.
+
+### Notes
+
+- Additive and non-breaking; no change to the galaxy visuals.
+
 ## [0.3.0] — 2026-08-22
 
 ### Added
