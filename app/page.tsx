@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import StarField from "@/components/StarField";
 import GalaxyDock from "@/components/GalaxyDock";
 import { useGalaxyParams } from "@/lib/useGalaxyParams";
+import { galaxyOfDay, dailyDeepLink, dayKey, DailyGalaxy } from "@/lib/galaxyOfDay";
 
 // "Report a bug" sends visitors straight to a pre-filled GitHub issue so bugs
 // land in the tracker where the autopilot picks them up. The body is a small
@@ -168,6 +170,11 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Galaxy of the Day — a fresh, seeded galaxy that refreshes at local
+          midnight. Fully client-side: the same calendar day always yields the
+          same galaxy, and its deep link re-hydrates exactly (see lib/galaxyOfDay.ts). */}
+      <GalaxyOfTheDay />
+
       <footer className="border-t border-white/10 px-6 py-10 text-center text-sm text-white/40">
         <div className="flex flex-col items-center gap-2">
           <span>Built and evolved inside a Multica workspace · Pinwheel Galaxy</span>
@@ -197,5 +204,100 @@ function FeatureCard({
       <h3 className="font-display text-xl font-semibold">{title}</h3>
       <p className="mt-2 text-sm text-white/60">{body}</p>
     </div>
+  );
+}
+
+// Galaxy of the Day — a single fresh galaxy that refreshes once per calendar
+// day. Deterministic and backend-free: the same day always yields the same
+// galaxy, and its deep link re-hydrates the exact creation (lib/galaxyOfDay.ts).
+function GalaxyOfTheDay() {
+  const [today, setToday] = useState({ day: dayKey() });
+  const [copied, setCopied] = useState(false);
+
+  // Recompute at local midnight so the card flips to the new galaxy automatically.
+  useEffect(() => {
+    const tick = () => {
+      const next = dayKey();
+      if (next !== today.day) setToday({ day: next });
+    };
+    const now = Date.now();
+    // Fire the first check at the next local midnight.
+    const delay = 60_000 - (now % 60_000);
+    const t1 = setTimeout(tick, delay);
+    const t2 = setInterval(tick, 60_000);
+    return () => {
+      clearTimeout(t1);
+      clearInterval(t2);
+    };
+  }, [today.day]);
+
+  const daily: DailyGalaxy = useMemo(
+    () => galaxyOfDay(new Date(today.day + "T00:00:00")),
+    [today.day],
+  );
+  const link = useMemo(() => dailyDeepLink(today.day), [today.day]);
+
+  const copyLink = async () => {
+    const url = `${window.location.origin}${link}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard is best-effort; fall back to leaving the value visible.
+      setCopied(false);
+    }
+  };
+
+  return (
+    <section
+      id="galaxy-of-the-day"
+      className="relative mx-auto max-w-6xl px-6 py-16"
+    >
+      <div className="cosmos-glow rounded-2xl p-8 sm:p-10">
+        <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+            <p className="text-sm font-medium uppercase tracking-[0.25em] text-cosmos-cyan">
+              {daily.prompt.tag}
+            </p>
+            <h2 className="mt-2 font-display text-3xl font-bold sm:text-4xl">
+              Galaxy of the <span className="text-gradient">Day</span>
+            </h2>
+            <p className="mt-1 text-white/50">{today.day}</p>
+          </div>
+          <span className="rounded-full border border-white/15 px-3 py-1 text-xs text-white/60">
+            Fresh at local midnight
+          </span>
+        </div>
+
+        <p className="mt-6 max-w-2xl text-white/70">
+          {daily.prompt.text} Give it a try — or open the exact galaxy everyone
+          is creating today.
+        </p>
+
+        <dl className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-2 text-sm text-white/60">
+          <dt>Today&rsquo;s galaxy</dt>
+          <dd className="font-medium text-white/90">{daily.label}</dd>
+        </dl>
+
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <a
+            href={link}
+            target="_blank"
+            rel="noreferrer"
+            className="cosmos-glow rounded-full px-6 py-2.5 font-semibold text-white transition-transform hover:scale-105"
+          >
+            Open today&rsquo;s galaxy
+          </a>
+          <button
+            type="button"
+            onClick={copyLink}
+            className="rounded-full border border-white/20 px-6 py-2.5 font-semibold text-white/80 transition-colors hover:text-white"
+          >
+            {copied ? "Link copied ✓" : "Copy shareable link"}
+          </button>
+        </div>
+      </div>
+    </section>
   );
 }
