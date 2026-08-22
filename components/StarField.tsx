@@ -40,6 +40,13 @@ import {
   applyZoomMultiplier,
   wheelDeltaToMultiplier,
 } from "@/lib/zoom";
+import {
+  DEPTH_SEED,
+  depthForIndex,
+  depthScale,
+  twinkleAlpha,
+  twinklePhase,
+} from "@/lib/starDepth";
 
 const SPRING_K = 0.02; // how strongly stars return to their orbit
 const DAMPING = 0.86; // velocity damping per frame
@@ -151,6 +158,7 @@ export default function StarField({
   nebula = false,
   shooting = false,
   zoomEnabled = false,
+  depthMode = false,
   onZoom,
 }: {
   active: boolean;
@@ -159,6 +167,8 @@ export default function StarField({
   nebula?: boolean;
   shooting?: boolean;
   zoomEnabled?: boolean;
+  /** Stellar Depth: an opt-in 3D parallax + twinkle layer over the stars. */
+  depthMode?: boolean;
   /** Called with the live zoom whenever it changes, so the parent can share it. */
   onZoom?: (zoom: number) => void;
 }) {
@@ -178,6 +188,16 @@ export default function StarField({
     const hues = (THEMES[theme]?.hues ?? THEMES[DEFAULT_CONFIG.theme].hues) as number[];
 
     let stars: Star[] = [];
+    // Stellar Depth: a stable per-star depth map ([0.15, 1]) and twinkle
+    // phase. Built in `resize()` so it tracks the current star count but never
+    // re-randomises between frames — the galaxy keeps its 3D shape.
+    const depthSeed = DEPTH_SEED;
+    let depths: number[] = [];
+    let phases: number[] = [];
+    // Stellar Depth: the eased cursor-parallax vector (px at depth 1). Near
+    // stars shift by this × their depth, so the field reads as 3D.
+    const parallax = { x: 0, y: 0 };
+    const PARALLAX = 26;
     let raf = 0;
     let last = 0;
     // Warp Drive strength: 0 (calm) -> 1 (full warp), driven by the spin knob.
@@ -210,6 +230,14 @@ export default function StarField({
       canvas.height = Math.round(h * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       stars = createStars(w, h, arms, STAR_COUNT, hues);
+      // (Re)build the depth map and twinkle phases for the current star count.
+      if (depthMode) {
+        depths = stars.map((_, i) => depthForIndex(i, STAR_COUNT, depthSeed));
+        phases = stars.map((_, i) => twinklePhase(i, STAR_COUNT, depthSeed));
+      } else {
+        depths = [];
+        phases = [];
+      }
     };
 
     const onMove = (e: MouseEvent) => {
@@ -282,6 +310,20 @@ export default function StarField({
 
       const cx = w / 2;
       const cy = h / 2;
+
+      // Stellar Depth: ease the parallax vector toward the cursor's offset from
+      // the galaxy centre. It fades to zero when the cursor leaves so the field
+      // settles. Applied as a draw-time offset (never to the spring physics), so
+      // it is fully orthogonal to the gravity well.
+      if (depthMode && !reduced) {
+        const targetX = mouse.active ? (mouse.x - cx) : 0;
+        const targetY = mouse.active ? (mouse.y - cy) : 0;
+        parallax.x += (targetX - parallax.x) * 0.08;
+        parallax.y += (targetY - parallax.y) * 0.08;
+      } else {
+        parallax.x += (0 - parallax.x) * 0.08;
+        parallax.y += (0 - parallax.y) * 0.08;
+      }
 
       // Galaxy Zoom: ease the visible zoom toward its target and broadcast
       // the live value so the parent can share it via the URL.
@@ -473,14 +515,20 @@ export default function StarField({
         ctx.translate(-cx, -cy);
       }
 
-      // Constellation mode: draw faint links between nearby stars.
+      // Constellation mode: draw faint links between nearby stars. When Stellar
+      // Depth is on, each star is drawn at its parallax-shifted position so the
+      // web bends with the 3D layering.
       if (constellation) {
         for (let i = 0; i < stars.length; i++) {
           const a = stars[i];
+          const ax = a.x + parallax.x * (depths[i] ?? 0);
+          const ay = a.y + parallax.y * (depths[i] ?? 0);
           for (let j = i + 1; j < stars.length; j++) {
             const b = stars[j];
-            const dx = b.x - a.x;
-            const dy = b.y - a.y;
+            const bx = b.x + parallax.x * (depths[j] ?? 0);
+            const by = b.y + parallax.y * (depths[j] ?? 0);
+            const dx = bx - ax;
+            const dy = by - ay;
             const dist2 = dx * dx + dy * dy;
             if (dist2 > CONSTELLATION_MAX_DIST * CONSTELLATION_MAX_DIST) continue;
             const dist = Math.sqrt(dist2) || 1;
@@ -499,8 +547,8 @@ export default function StarField({
             )})`;
             ctx.lineWidth = (0.6 + proximity * 0.9) * starScale;
             ctx.beginPath();
-            ctx.moveTo(a.x, a.y);
-            ctx.lineTo(b.x, b.y);
+            ctx.moveTo(ax, ay);
+            ctx.lineTo(bx, by);
             ctx.stroke();
           }
         }
@@ -510,9 +558,12 @@ export default function StarField({
       // streak length scales with both the star's speed and the global warp
       // factor, so the streaks ripple with the gravity well and shockwaves.
       if (warpFactor > 0) {
-        for (const s of stars) {
+        for (let i = 0; i < stars.length; i++) {
+          const s = stars[i];
           const speed = Math.hypot(s.vx, s.vy);
           if (speed < 2) continue;
+          const sx = s.x + parallax.x * (depths[i] ?? 0);
+          const sy = s.y + parallax.y * (depths[i] ?? 0);
           const len = Math.min(70, speed * 0.45 + warpFactor * 26);
           const nx = s.vx / speed;
           const ny = s.vy / speed;
@@ -533,22 +584,31 @@ export default function StarField({
           ctx.strokeStyle = grad;
           ctx.lineWidth = s.size * (1 + glow) * starScale;
           ctx.beginPath();
-          ctx.moveTo(s.x - nx * len, s.y - ny * len);
-          ctx.lineTo(s.x + nx * len, s.y + ny * len);
+          ctx.moveTo(sx - nx * len, sy - ny * len);
+          ctx.lineTo(sx + nx * len, sy + ny * len);
           ctx.stroke();
         }
       }
 
-      for (const s of stars) {
+      for (let i = 0; i < stars.length; i++) {
+        const s = stars[i];
+        const depth = depthMode ? (depths[i] ?? 1) : 1;
         const speed = Math.hypot(s.vx, s.vy);
         const glow = Math.min(1, speed / 40);
-        const alpha = s.baseAlpha + glow * 0.4;
+        // Stellar Depth: twinkle (nearer stars twinkle harder) and an
+        // atmospheric-perspective scale (far stars smaller and dimmer).
+        const twinkle = depthMode ? twinkleAlpha(phases[i] ?? 0, now / 1000, depth) : 1;
+        const ds = depthScale(depth);
+        const sx = s.x + parallax.x * (depths[i] ?? 0);
+        const sy = s.y + parallax.y * (depths[i] ?? 0);
+        const alpha = (s.baseAlpha + glow * 0.4) * twinkle * ds;
         ctx.beginPath();
-        const grad = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.size * (2 + glow) * starScale);
+        const radius = s.size * (2 + glow) * starScale * ds;
+        const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, radius);
         grad.addColorStop(0, `hsla(${s.hue}, 90%, ${70 + glow * 20}%, ${alpha})`);
         grad.addColorStop(1, `hsla(${s.hue}, 90%, 60%, 0)`);
         ctx.fillStyle = grad;
-        ctx.arc(s.x, s.y, s.size * (2 + glow) * starScale, 0, Math.PI * 2);
+        ctx.arc(sx, sy, radius, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -583,7 +643,7 @@ export default function StarField({
       canvas.removeEventListener("touchend", onTouchEnd);
       window.removeEventListener("resize", resize);
     };
-  }, [active, reduced, config, nebula, shooting, zoomEnabled, onZoom]);
+  }, [active, reduced, config, nebula, shooting, zoomEnabled, depthMode, onZoom]);
 
   return (
     <canvas

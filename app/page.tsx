@@ -37,6 +37,7 @@ export default function Home() {
   const [nebula, setNebula] = useState(false);
   const [shooting, setShooting] = useState(false);
   const [zoomEnabled, setZoomEnabled] = useState(false);
+  const [depth, setDepth] = useState(false);
 
   return (
     <main className="relative min-h-screen overflow-hidden">
@@ -88,6 +89,7 @@ export default function Home() {
           nebula={nebula}
           shooting={shooting}
           zoomEnabled={zoomEnabled}
+          depthMode={depth}
           onZoom={setZoom}
         />
 
@@ -182,6 +184,20 @@ export default function Home() {
             }}
           >
             Zoom: {zoomEnabled ? "On" : "Off"}
+          </button>
+          <button
+            onClick={() => setDepth((d) => !d)}
+            aria-pressed={depth}
+            className={`glass rounded-full px-4 py-2 font-medium transition-colors ${
+              depth ? "text-white" : "text-white/70"
+            }`}
+            style={{
+              backgroundColor: depth
+                ? "rgba(132,204,227,0.7)"
+                : "rgba(255,255,255,0.12)",
+            }}
+          >
+            Depth: {depth ? "On" : "Off"}
           </button>
         </div>
       </section>

@@ -4,6 +4,32 @@ All notable changes to **Pinwheel Galaxy** are documented here. This project
 follows [Keep a Changelog](https://keepachangelog.com) conventions, plus a
 "Shipped" section for ongoing autonomous evolution.
 
+## [0.7.0] — 2026-08-22
+
+### Added
+
+- **Stellar Depth** — an opt-in 3D parallax + twinkle layer over the interactive
+  starfield. When enabled, moving the cursor shifts near stars more than far
+  ones (parallax), stars gently twinkle (nearer stars harder), and far stars are
+  dimmed and softened like atmospheric perspective. Implemented additively in the
+  star draw pass only — it never touches the gravity-well spring physics, so it
+  is fully orthogonal to every other feature and **off by default**.
+  - `lib/starDepth.ts` (new) — the **pure** logic: `depthForIndex` (a stable,
+    seeded depth map in `[0.15, 1]`), `twinklePhase`, `twinkleAlpha`,
+    `depthScale`, and `parallaxFor`. `lib/starDepth.test.ts` (new) covers range,
+    determinism, parallax scaling, twinkle bounds/variation, and scale mapping.
+  - `components/StarField.tsx` gained a `depthMode` prop, builds the depth map +
+    twinkle phases in `resize()`, eases a cursor-parallax vector each frame, and
+    applies a draw-time `parallax × depth` offset plus twinkle/atmospheric
+    scaling to the star pass.
+  - `app/page.tsx` gained a **Depth: On/Off** toggle in the hero control row.
+
+### Notes
+
+- Additive and non-breaking; the default galaxy (toggle off) is visually
+  unchanged. Built, locally verified (`npm run build` + `npm test` 33/33), and
+  deployed to Vercel production.
+
 ## [0.6.0] — 2026-08-22
 
 ### Added
