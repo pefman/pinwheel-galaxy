@@ -5,6 +5,60 @@ additive and dated. New features are added here every evolution cycle.
 
 ---
 
+## Stellar Depth — a 3D Parallax Layer for the Starfield
+
+- **Date added:** 2026-08-22
+- **Version:** 0.7.0
+- **Status:** Shipped & live on Vercel — https://pinwheel-galaxy.vercel.app
+
+### What + why
+
+The hero starfield read as a flat, rotating disc. Stellar Depth adds a subtle
+3D parallax + twinkle layer so the galaxy reads as a volume of stars at
+different distances. When enabled, moving the cursor shifts near stars more than
+far ones (parallax), stars gently twinkle (nearer stars harder), and far stars
+are dimmed and softened (atmospheric perspective). **Off by default**, purely
+additive, and orthogonal to every other feature, so the default galaxy is
+unchanged.
+
+### How it works (high-level)
+
+- `lib/starDepth.ts` (new) holds the pure logic (unit-tested): `depthForIndex`
+  assigns each star a stable distance in `[0.15, 1]` (seeded, so it never
+  re-randomises), `twinklePhase` staggers twinkle, and `twinkleAlpha` /
+  `depthScale` drive the draw-time twinkle and atmospheric-perspective scaling.
+- `components/StarField.tsx` owns the layer: it builds the depth map + twinkle
+  phases in `resize()` (fixed between frames), eases a cursor-parallax vector
+  each frame, applies a draw-time `parallax × depth` offset to every star, and
+  modulates the star draw pass. The parallax is applied *after* the spring
+  physics, so it is fully orthogonal to the gravity well.
+- `app/page.tsx` gained a **Depth: On/Off** toggle in the hero control row.
+
+### Key files / components
+
+- `lib/starDepth.ts` (new) and `lib/starDepth.test.ts` (new, 9 tests).
+- `components/StarField.tsx` — new `depthMode` prop, depth-map build, eased
+  parallax vector, twinkle + atmospheric-perspective draw pass.
+- `app/page.tsx` — the **Depth: On/Off** toggle.
+
+### User-facing behavior
+
+- Click **Depth: On** (new rightmost toggle), then move the cursor — the stars
+  separate into depth layers and twinkle. Move away and the field settles.
+- Works alongside gravity, warp, constellations, nebula, meteors, and zoom.
+
+### How to test / try it
+
+1. `npm install` → `npm run build` → `npm start`; toggle **Depth: On** and move
+   the cursor — near stars shift more than far ones.
+2. Turn on Constellation Mode with Depth on — the link web bends with the layer.
+
+### Known limitations / follow-ups
+
+- Toggle state is not persisted across reloads; a follow-up could add a
+  `?depth=` param. Depth is a single parallax axis; multiple independent depth
+  layers would deepen the sense of scale.
+
 ## Galaxy Zoom — Dolly Into the Starfield
 
 - **Date added:** 2026-08-22
