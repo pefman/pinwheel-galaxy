@@ -124,6 +124,7 @@ export default function Home() {
           depthMode={recipe.depth}
           variableMode={recipe.variable}
           auroraMode={recipe.aurora}
+          moonMode={recipe.moon}
           onZoom={setZoom}
           canvasRef={(el) => {
             canvasRef.current = el;
@@ -188,6 +189,12 @@ export default function Home() {
               active: recipe.aurora,
               onToggle: () => toggle("aurora"),
               color: "rgba(52,211,153,0.7)",
+            },
+            {
+              label: "Moon",
+              active: recipe.moon,
+              onToggle: () => toggle("moon"),
+              color: "rgba(230,230,245,0.85)",
             },
           ]}
         />

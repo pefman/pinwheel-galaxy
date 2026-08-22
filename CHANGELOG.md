@@ -4,6 +4,44 @@ All notable changes to **Pinwheel Galaxy** are documented here. This project
 follows [Keep a Changelog](https://keepachangelog.com) conventions, plus a
 "Shipped" section for ongoing autonomous evolution.
 
+## [0.15.0] — 2026-08-22
+
+### Added
+
+- **Lunar Transit** — the night sky now has a *moon*. A single, recognisable
+  body rises from the left edge of the hero, drifts slowly across the sky on its
+  own clock, and waxes and wanes through a full cycle (new → full → new on a
+  4-minute cycle so a visitor sees every phase in a single session). It is
+  off by default, purely additive, and distinct from every other layer: not a
+  field of points, not a sky-wide ribbon — one body with its own face and
+  phase.
+  - `lib/moon.ts` (new) — the **pure** model: `computeMoon` (a drifting position
+    on a 240 s transit, a fixed seeded crater face, a `monthT`-clock phase
+    `litFraction = 0.5 + 0.5·cos(2π·monthT)`, a lit-side flip at full moon, and
+    a human phase label), plus `terminatorXRadius` — the terminator is a true
+    half-ellipse whose extent `radius·(1−2·litFraction)` makes the drawn lit
+    area exactly equal `litFraction` of the disk.
+  - `lib/moon.test.ts` (new, 10 tests) covers determinism, the new→full→new
+    sweep, the lit-side flip, the terminator's half-ellipse extent, the lit-area
+    matching the fraction, label correctness, and the transit period.
+  - `lib/recipe.ts` gained a shareable `?moon=` layer toggle (off by default) and
+    it is surfaced in `describeRecipe`.
+  - `components/StarField.tsx` gained an opt-in `moonMode` prop that advances a
+    moon clock each frame and paints, **behind the stars** (like nebula,
+    meteors and the aurora): a soft outer glow, the full disk base (faint
+    earthshine on the dark side), the seeded craters clipped to the disk, and
+    the lit region (a semicircle on the lit limb closed by the terminator
+    half-ellipse, mirrored for waxing vs waning).
+  - `app/page.tsx` wires `moonMode={recipe.moon}` and adds a **Moon** chip to
+    the Galaxy Dock's environment row.
+
+### Notes
+
+- Additive and non-breaking: the starfield, presets, recipes, dock and every
+  prior feature are untouched, the default galaxy looks exactly as before, and
+  the moon is inert until toggled on. Built and locally verified
+  (`npm run build` + `npm test` 120/120). Deploying to Vercel production.
+
 ## [0.14.0] — 2026-08-22
 
 ### Added

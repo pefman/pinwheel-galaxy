@@ -27,6 +27,8 @@ export interface GalaxyRecipe {
   zoomMode: boolean;
   /** Aurora: an opt-in northern-lights ribbon layer across the upper sky. */
   aurora: boolean;
+  /** Lunar Transit: an opt-in moon that drifts and wanes across the sky. */
+  moon: boolean;
 }
 
 export const DEFAULT_RECIPE: GalaxyRecipe = {
@@ -38,6 +40,7 @@ export const DEFAULT_RECIPE: GalaxyRecipe = {
   comet: false,
   zoomMode: false,
   aurora: false,
+  moon: false,
 };
 
 /** The URL param name for each layer, in a stable display order. */
@@ -50,6 +53,7 @@ export const RECIPE_PARAMS = {
   comet: "comet",
   zoom: "zoom",
   aurora: "aurora",
+  moon: "moon",
 } as const;
 
 /** Read one boolean layer param; missing / non-"on" values are `false`. */
@@ -72,6 +76,7 @@ export function parseRecipe(params: URLSearchParams): GalaxyRecipe {
     comet: parseLayer(params, RECIPE_PARAMS.comet),
     zoomMode: parseLayer(params, RECIPE_PARAMS.zoom),
     aurora: parseLayer(params, RECIPE_PARAMS.aurora),
+    moon: parseLayer(params, RECIPE_PARAMS.moon),
   };
 }
 
@@ -90,6 +95,7 @@ export function recipeToParams(recipe: Partial<GalaxyRecipe>): URLSearchParams {
   if (recipe.comet) p.set(RECIPE_PARAMS.comet, "on");
   if (recipe.zoomMode) p.set(RECIPE_PARAMS.zoom, "on");
   if (recipe.aurora) p.set(RECIPE_PARAMS.aurora, "on");
+  if (recipe.moon) p.set(RECIPE_PARAMS.moon, "on");
   return p;
 }
 
@@ -108,6 +114,7 @@ export function resolveRecipe(partial: Partial<GalaxyRecipe>): GalaxyRecipe {
     comet: partial.comet ?? DEFAULT_RECIPE.comet,
     zoomMode: partial.zoomMode ?? DEFAULT_RECIPE.zoomMode,
     aurora: partial.aurora ?? DEFAULT_RECIPE.aurora,
+    moon: partial.moon ?? DEFAULT_RECIPE.moon,
   };
 }
 
@@ -136,6 +143,7 @@ export function describeRecipe(recipe: GalaxyRecipe): string {
     on("Comet", recipe.comet),
     on("Zoom", recipe.zoomMode),
     on("Aurora", recipe.aurora),
+    on("Moon", recipe.moon),
   ].filter(Boolean) as string[];
   return parts.length ? parts.join(", ") : "Default galaxy";
 }

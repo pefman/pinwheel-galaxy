@@ -68,6 +68,12 @@ import {
   computeAuroraBands,
   type AuroraBand,
 } from "@/lib/aurora";
+import {
+  computeMoon,
+  describeMoonPhase,
+  terminatorXRadius,
+  type MoonState,
+} from "@/lib/moon";
 
 const SPRING_K = 0.02; // how strongly stars return to their orbit
 const DAMPING = 0.86; // velocity damping per frame
@@ -192,6 +198,7 @@ export default function StarField({
   variableMode = false,
   cometMode = false,
   auroraMode = false,
+  moonMode = false,
   onZoom,
   canvasRef,
 }: {
@@ -211,6 +218,11 @@ export default function StarField({
   cometMode?: boolean;
   /** Aurora: an opt-in northern-lights ribbon layer across the upper sky. */
   auroraMode?: boolean;
+  /**
+   * Lunar Transit: an opt-in moon that drifts slowly across the sky and waxes
+   * and wanes through a full cycle. Pure atmosphere — never touches the stars.
+   */
+  moonMode?: boolean;
   /** Called with the live zoom whenever it changes, so the parent can share it. */
   onZoom?: (zoom: number) => void;
   /** Forwarded to the canvas element, so the parent can capture it (e.g. for a
@@ -279,6 +291,12 @@ export default function StarField({
     let auroraTime = 0;
     let auroraBands: AuroraBand[] = [];
     let auroraSway = 0;
+    // Lunar Transit: a running clock for the moon's drift + phase, plus its
+    // static per-frame geometry (built in `resize()` so it tracks the current
+    // sky size but never re-randomises between frames). Built when the layer is
+    // on; cleared when off.
+    let moonTime = 0;
+    let moon: MoonState = {} as MoonState;
 
     const resize = () => {
       dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
@@ -383,6 +401,13 @@ export default function StarField({
 
       // Spin the galaxy.
       galaxyAngle += (rpm * Math.PI * 2) / 60 * dt;
+
+      // Lunar Transit: advance the moon's drift + phase clock. Its geometry is
+      // recomputed each frame from this clock (cheap arithmetic) so it drifts
+      // smoothly and wanes over its month.
+      if (moonMode) {
+        moonTime += dt * 1000;
+      }
 
       const cx = w / 2;
       const cy = h / 2;
@@ -599,6 +624,85 @@ export default function StarField({
           ctx.closePath();
           ctx.fill();
         }
+      }
+
+      // Lunar Transit: a single recognisable body to complement the star
+      // field. A moon drifts slowly across the sky on its own clock and waxes
+      // and wanes through a full cycle. Painted *behind* the stars (like nebula,
+      // meteors and the aurora) so the interactive galaxy stays foreground. The
+      // lit region is a semicircle on the lit limb closed by a true terminator
+      // half-ellipse, so the drawn lit area always equals the moon's
+      // fractional illumination. Pure atmosphere — never touches the stars.
+      if (moonMode) {
+        const m = computeMoon({ time: moonTime, width: w, height: h });
+        const mx = m.x;
+        const my = m.y;
+        const R = m.radius;
+        // Soft outer glow — the sun-lit moon casts a faint halo.
+        const glow = ctx.createRadialGradient(mx, my, R * 0.9, mx, my, R * 2.6);
+        glow.addColorStop(0, "hsla(210, 40%, 90%, 0.30)");
+        glow.addColorStop(0.55, "hsla(210, 30%, 85%, 0.12)");
+        glow.addColorStop(1, "hsla(210, 30%, 85%, 0)");
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(mx, my, R * 2.6, 0, Math.PI * 2);
+        ctx.fill();
+        // Disk base: the whole surface (this is what the dark side shows,
+        // faintly, as earthshine).
+        const surface = ctx.createRadialGradient(
+          mx - R * 0.3,
+          my - R * 0.3,
+          R * 0.1,
+          mx,
+          my,
+          R,
+        );
+        surface.addColorStop(0, "hsla(45, 14%, 92%, 0.98)");
+        surface.addColorStop(1, "hsla(40, 10%, 66%, 0.95)");
+        ctx.fillStyle = surface;
+        ctx.beginPath();
+        ctx.arc(mx, my, R, 0, Math.PI * 2);
+        ctx.fill();
+        // Craters: subtle darker discs, clipped to the disk.
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(mx, my, R, 0, Math.PI * 2);
+        ctx.clip();
+        for (const c of m.craters) {
+          const cx = mx + c.dx * R;
+          const cy = my + c.dy * R;
+          const cr = c.r * R;
+          const crater = ctx.createRadialGradient(cx, cy, 0, cx, cy, cr);
+          crater.addColorStop(0, `hsla(40, 12%, 55%, ${c.a})`);
+          crater.addColorStop(0.7, `hsla(40, 10%, 62%, ${c.a * 0.6})`);
+          crater.addColorStop(1, "hsla(45, 12%, 80%, 0)");
+          ctx.fillStyle = crater;
+          ctx.beginPath();
+          ctx.arc(cx, cy, cr, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+        // Lit region: a semicircle on the lit limb closed by the terminator
+        // half-ellipse. Mirror on x for waxing (right-lit) vs waning (left-lit)
+        // so the phase reads on whichever side the sun is.
+        const e = terminatorXRadius(R, m.litFraction);
+        ctx.save();
+        ctx.translate(mx, my);
+        ctx.scale(m.litSide, 1);
+        ctx.beginPath();
+        ctx.moveTo(0, -R);
+        ctx.arc(0, 0, R, -Math.PI / 2, Math.PI / 2, false);
+        ctx.save();
+        ctx.scale(e / R, 1);
+        ctx.arc(0, 0, R, Math.PI / 2, -Math.PI / 2, false);
+        ctx.restore();
+        ctx.closePath();
+        const lit = ctx.createRadialGradient(0, 0, R * 0.1, 0, 0, R * 1.2);
+        lit.addColorStop(0, "hsla(45, 18%, 97%, 1)");
+        lit.addColorStop(1, "hsla(42, 15%, 86%, 0.98)");
+        ctx.fillStyle = lit;
+        ctx.fill();
+        ctx.restore();
       }
       for (const p of pulses) {
         // The ring only reaches radius == PULSE_WIDTH once fully grown, so while
@@ -861,6 +965,7 @@ export default function StarField({
     variableMode,
     cometMode,
     auroraMode,
+    moonMode,
     onZoom,
   ]);
 
