@@ -5,6 +5,75 @@ additive and dated. New features are added here every evolution cycle.
 
 ---
 
+## Galaxy Zoom — Dolly Into the Starfield
+
+- **Date added:** 2026-08-22
+- **Version:** 0.6.0
+- **Status:** Shipped & live on Vercel — https://pinwheel-galaxy.vercel.app
+
+### What + why
+
+Until now the hero starfield was fixed: you could spin and poke the galaxy, but
+never get closer to it. Galaxy Zoom lets a visitor **scroll into the galaxy** —
+a wheel / trackpad two-finger scroll (or a two-finger pinch on touch) eases the
+camera in and out, and a double-click snaps back. This adds a whole new axis of
+interaction on top of the gravity well and spin knobs: you can now zoom up and
+poke individual stars. It is a small, delightful, purely additive touch and it
+is **off by default**, so the default galaxy looks unchanged.
+
+### How it works (high-level)
+
+- `lib/zoom.ts` (new) holds the **pure** logic given as unit tests: clamping to
+  the 0.6×–2.5× range, easing the visible zoom toward an animated target each
+  frame, turning a wheel delta into a multiplier, the `1 / zoom` screen-size
+  scale that keeps stars crisp, and the `?z=` URL binding.
+- `components/StarField.tsx` owns the live zoom state. When `zoomEnabled` it
+  listens to `wheel` and two-finger `touch` gestures to set a `targetZoom`, and
+  eases the visible `zoom` toward it. Every frame it renders the galaxy — the
+  constellation web, the warp streaks and the stars — inside a `ctx`
+  transform scaled by `zoom` around the galaxy centre, while drawing that
+  geometry at `1 / zoom` so it holds a constant on-screen size (a dolly, not a
+  blow-up). Nebula, meteors and click pulses are drawn outside the box at screen
+  scale, so the atmosphere reads as a fixed backdrop the galaxy moves through.
+- `lib/useGalaxyParams.ts` now carries `?z=` alongside theme / arms / rpm /
+  stars and gravity, so a zoomed galaxy is deep-linkable and survives
+  Back/Forward navigation.
+
+### Key files / components
+
+- `lib/zoom.ts`, `lib/zoom.test.ts` (new)
+- `components/StarField.tsx` — new `zoomEnabled` prop + `onZoom` callback, zoom
+  gesture handlers, and the `zoom`-scaled galaxy draw transform.
+- `lib/useGalaxyParams.ts` — `?z=` param read/write.
+- `app/page.tsx` — the **Zoom: On/Off** toggle in the hero control row.
+
+### User-facing behavior
+
+- Click **Zoom: On** (rightmost toggle in the bottom control row), then scroll
+  with the wheel / trackpad — the galaxy eases in and out. Pinch on touch.
+- Double-click (or double-tap) resets to the default 1× view.
+- The current zoom level is written into the URL (`?z=1.30`), so a zoomed
+  galaxy is shareable and restores on reload / Back+Forward.
+- When Zoom is Off, the wheel scrolls the page as normal.
+
+### How to test / try it
+
+1. `npm install` then `npm run build` and `npm start`.
+2. Open the site, scroll to the hero.
+3. Toggle **Zoom: On** and scroll with the wheel — the galaxy dollys in.
+4. Double-click — it snaps back to 1×.
+5. Watch the URL gain a `?z=` param; reload to confirm it restores.
+6. Toggle Off — the wheel scrolls the page again.
+
+### Limitations / follow-ups
+
+- Zoom is a global dolly around the galaxy centre; there is no per-axis pan
+  yet — a natural follow-up is drag-to-pan once zoomed in.
+- The `?z=` param is clamped to two decimals; sub-centimetre precision is lost
+  in the URL (intentional, keeps links tidy).
+
+---
+
 ## Shooting Stars — Meteors Across the Deep Sky
 
 - **Date added:** 2026-08-22

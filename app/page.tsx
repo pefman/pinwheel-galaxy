@@ -31,11 +31,12 @@ const BUG_REPORT_URL = (() => {
 })();
 
 export default function Home() {
-  const { config, gravity, applyConfig, toggleGravity, shuffle, shareQuery } =
+  const { config, gravity, zoom, applyConfig, toggleGravity, shuffle, setZoom, shareQuery } =
     useGalaxyParams();
   const [constellations, setConstellations] = useState(false);
   const [nebula, setNebula] = useState(false);
   const [shooting, setShooting] = useState(false);
+  const [zoomEnabled, setZoomEnabled] = useState(false);
 
   return (
     <main className="relative min-h-screen overflow-hidden">
@@ -86,6 +87,8 @@ export default function Home() {
           constellation={constellations}
           nebula={nebula}
           shooting={shooting}
+          zoomEnabled={zoomEnabled}
+          onZoom={setZoom}
         />
 
         <div className="relative z-10 max-w-3xl text-center">
@@ -165,6 +168,20 @@ export default function Home() {
             }}
           >
             Shooting Stars: {shooting ? "On" : "Off"}
+          </button>
+          <button
+            onClick={() => setZoomEnabled((z) => !z)}
+            aria-pressed={zoomEnabled}
+            className={`glass rounded-full px-4 py-2 font-medium transition-colors ${
+              zoomEnabled ? "text-white" : "text-white/70"
+            }`}
+            style={{
+              backgroundColor: zoomEnabled
+                ? "rgba(34,211,238,0.7)"
+                : "rgba(255,255,255,0.12)",
+            }}
+          >
+            Zoom: {zoomEnabled ? "On" : "Off"}
           </button>
         </div>
       </section>
