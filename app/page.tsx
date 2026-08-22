@@ -80,6 +80,9 @@ export default function Home() {
           <span className="text-gradient">Pinwheel Galaxy</span>
         </div>
         <div className="hidden items-center gap-6 text-sm text-white/60 md:flex">
+          <a href="/insights" className="transition-colors hover:text-white">
+            Insights
+          </a>
           <a href="#features" className="transition-colors hover:text-white">
             Features
           </a>
