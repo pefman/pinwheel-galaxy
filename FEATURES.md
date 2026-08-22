@@ -5,6 +5,49 @@ additive and dated. New features are added here every evolution cycle.
 
 ---
 
+## Bug Report Link — Straight to the GitHub Tracker
+
+- **Date added:** 2026-08-22
+- **Version:** 0.4.0
+- **Status:** Shipped & live on Vercel — https://pinwheel-galaxy.vercel.app
+
+### What + why
+
+Visitors can now **report a bug in one click**. A "Report a bug" link in the
+navigation bar and footer opens a pre-filled GitHub "new issue" page, so feedback
+lands directly in the issue tracker where the autonomous bug-fixing autopilot
+picks it up. This closes the loop between the live site and the agents that
+maintain it.
+
+### How it works (high-level)
+
+- A module-level constant `BUG_REPORT_URL` in `app/page.tsx` builds the GitHub
+  new-issue URL with `URLSearchParams`: a `[Bug]` title stub and a small body
+  template (describe → reproduce → expected → environment).
+- The link opens in a new tab. The reporter **suggests** a problem; they never
+  write or dictate the fix — the autopilot owns the fix.
+
+### Key files / components
+
+- `app/page.tsx` — the `BUG_REPORT_URL` constant and the two link placements.
+- `https://github.com/pefman/pinwheel-galaxy/issues/new` — the destination.
+
+### User-facing behavior
+
+- Click **Report a bug** in the top nav or the footer.
+- A GitHub issue form opens with a `[Bug] …` title and a structured body.
+- Submit to file the report; the bug-fixing autopilot triages it on its next run.
+
+### How to test / try it
+
+1. `npm install` then `npm run build` and `npm start`.
+2. Open the site and click **Report a bug** (nav bar and footer).
+3. Confirm the GitHub new-issue page opens with the pre-filled title and body.
+
+See `docs/features/bug-report-link.md` for the full doc.
+
+---
+
 ## Nebula Drift — Living Depth Backdrop
 
 - **Date added:** 2026-08-22
@@ -62,6 +105,8 @@ galaxy looks unchanged.
 
 Direct link with Aurora: `?theme=aurora&arms=5&rpm=9&stars=400` (then toggle
 Nebula On). See `docs/features/nebula-drift.md` for the full doc.
+
+---
 
 ## Galaxy Presets — Shareable, Deep-Linkable Galaxy Configs
 

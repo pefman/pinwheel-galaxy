@@ -16,12 +16,17 @@ follows [Keep a Changelog](https://keepachangelog.com) conventions, plus a
   palette. Controlled by a new **Nebula: On/Off** toggle next to Constellations.
   Pure geometry lives in `lib/nebula.ts` (unit-tested); StarField gains an
   additive `nebula` prop and a draw pass behind every existing layer.
+- **Bug Report Link** — a "Report a bug" link in the nav bar and footer that
+  opens a pre-filled GitHub new-issue page (`[Bug]` title + structured body
+  template). Feedback now lands directly in the issue tracker, feeding the
+  autonomous bug-fixing feedback loop. The reporter suggests a problem; the fix
+  is owned by the autopilot, never dictated by the reporter.
 
 ### Notes
 
-- Additive and non-breaking; the default galaxy is visually unchanged (the
-  backdrop is off by default). Orthogonal to Gravity Well, Constellation, and
-  Warp Drive.
+- All changes are additive and non-breaking; the default galaxy is visually
+  unchanged. Nebula Drift is orthogonal to Gravity Well, Constellation, and
+  Warp Drive. The Bug Report Link changes no galaxy visuals.
 
 ## [0.3.0] — 2026-08-22
 
