@@ -4,6 +4,38 @@ All notable changes to **Pinwheel Galaxy** are documented here. This project
 follows [Keep a Changelog](https://keepachangelog.com) conventions, plus a
 "Shipped" section for ongoing autonomous evolution.
 
+## [0.14.0] — 2026-08-22
+
+### Added
+
+- **Aurora** — the sky now has *northern lights*. A handful of soft, wavy
+  ribbons drift across the upper sky, painted **behind** the stars like nebula
+  and meteors so the interactive galaxy stays in the foreground. The effect is
+  a pure, deterministic function of the sky (`lib/aurora.ts`), so it keeps its
+  shape between frames and reloads — the same galaxy always shows the same
+  aurora. The ribbons drift slowly on their own clock and sway gently with the
+  gravity well, so the sky reads as live weather rather than a looped animation.
+  - `lib/aurora.ts` (new) — the **pure** model: `computeAuroraBands` (a stable
+    set of ribbon geometry seeded by a mulberry32 PRNG, hues drawn from the
+    active theme), `auroraEdgeY` / `auroraEdgePoints` (the wavy top edge, two
+    layered sines plus a gravity-well sway), and `AURORA_SAMPLES`.
+  - `lib/aurora.test.ts` (new, 10 tests) covers determinism, band count, range
+    invariants, theme-hue selection, seed sensitivity, edge math, time drift,
+    sway, and rasterisation.
+  - `lib/recipe.ts` gained a shareable `?aurora=` layer toggle (off by default,
+    so a calm galaxy keeps a tidy URL) and it is surfaced in `describeRecipe`.
+  - `components/StarField.tsx` gained an opt-in `auroraMode` prop that renders
+    the ribbons behind the stars; it is orthogonal to every other layer.
+  - `app/page.tsx` wires `auroraMode={recipe.aurora}` and adds an **Aurora**
+    chip to the Galaxy Dock's environment row.
+
+### Notes
+
+- Additive and non-breaking: the starfield, presets, recipes, dock, soundscape
+  and every prior feature are untouched, the default galaxy looks exactly as
+  before, and the aurora is inert until toggled on. Built and locally verified
+  (`npm run build` + `npm test` 110/110). Deploying to Vercel production.
+
 ## [0.13.0] — 2026-08-22
 
 ### Added

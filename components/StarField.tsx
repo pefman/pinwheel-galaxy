@@ -62,6 +62,12 @@ import {
   tailLengthFromSpeed,
   type Point as CometPoint,
 } from "@/lib/comet";
+import {
+  AURORA_SAMPLES,
+  auroraEdgePoints,
+  computeAuroraBands,
+  type AuroraBand,
+} from "@/lib/aurora";
 
 const SPRING_K = 0.02; // how strongly stars return to their orbit
 const DAMPING = 0.86; // velocity damping per frame
@@ -185,6 +191,7 @@ export default function StarField({
   depthMode = false,
   variableMode = false,
   cometMode = false,
+  auroraMode = false,
   onZoom,
   canvasRef,
 }: {
@@ -202,6 +209,8 @@ export default function StarField({
   /** Comet Trail: an opt-in glowing comet that trails the pointer, its tail
    * length growing with cursor speed and its hue drawn from the active theme. */
   cometMode?: boolean;
+  /** Aurora: an opt-in northern-lights ribbon layer across the upper sky. */
+  auroraMode?: boolean;
   /** Called with the live zoom whenever it changes, so the parent can share it. */
   onZoom?: (zoom: number) => void;
   /** Forwarded to the canvas element, so the parent can capture it (e.g. for a
@@ -265,6 +274,11 @@ export default function StarField({
     // eased head position the comet's bright core follows.
     const cometHistory: CometPoint[] = [];
     const cometHead = { x: -9999, y: -9999 };
+    // Aurora: the static per-band geometry (built in `resize()`) and a running
+    // clock. The ribbons drift on `auroraTime` and sway with the gravity well.
+    let auroraTime = 0;
+    let auroraBands: AuroraBand[] = [];
+    let auroraSway = 0;
 
     const resize = () => {
       dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
@@ -288,6 +302,17 @@ export default function StarField({
         variableAssign = assignVariableStars(STAR_COUNT, VARIABLE_SEED);
       } else {
         variableAssign = [];
+      }
+      // Aurora: (re)build the per-band geometry for the current sky size when
+      // the layer is on; clear it when off. Bands are a pure function of the
+      // size + theme, so the aurora keeps its shape across resizes.
+      if (auroraMode) {
+        auroraBands = computeAuroraBands({
+          height: h,
+          hues,
+        });
+      } else {
+        auroraBands = [];
       }
     };
 
@@ -525,6 +550,53 @@ export default function StarField({
           ctx.fillStyle = grad;
           ctx.beginPath();
           ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Aurora: a handful of soft, wavy northern-lights ribbons drifting across
+      // the upper sky. Painted *behind* the stars (like nebula and meteors) so
+      // the interactive galaxy stays foreground. Each ribbon is a filled path
+      // whose top edge waves on two layered sines; the ribbons drift on time and
+      // sway gently with the gravity well. Pure atmosphere — never touches stars.
+      if (auroraMode && auroraBands.length > 0) {
+        auroraTime += dt;
+        // Ease a horizontal sway toward the cursor's offset from the centre, so
+        // the ribbons ripple with the gravity well and settle when idle.
+        const swayTarget =
+          reduced || !mouse.active ? 0 : (cx - mouse.x) * 0.15;
+        auroraSway += (swayTarget - auroraSway) * 0.06;
+        for (const band of auroraBands) {
+          const pts = auroraEdgePoints(
+            band,
+            w,
+            h,
+            auroraTime,
+            auroraSway,
+          );
+          // Vertical gradient: bright and saturated at the ribbon's top edge,
+          // fading to fully transparent a short way down.
+          const topY = pts[0][1];
+          const grad = ctx.createLinearGradient(0, topY, 0, topY + h * 0.5);
+          grad.addColorStop(
+            0,
+            `hsla(${band.hue}, ${band.saturation}%, ${band.lightness}%, ${band.alpha})`,
+          );
+          grad.addColorStop(
+            0.5,
+            `hsla(${band.hue}, ${band.saturation}%, ${band.lightness * 0.8}%, ${band.alpha * 0.4})`,
+          );
+          grad.addColorStop(1, `hsla(${band.hue}, ${band.saturation}%, ${band.lightness * 0.6}%, 0)`);
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.moveTo(pts[0][0], pts[0][1]);
+          for (let i = 1; i < pts.length; i++) {
+            ctx.lineTo(pts[i][0], pts[i][1]);
+          }
+          // Close down through the bottom of the sky so the ribbon fills solidly.
+          ctx.lineTo(w, h);
+          ctx.lineTo(0, h);
+          ctx.closePath();
           ctx.fill();
         }
       }
@@ -788,6 +860,7 @@ export default function StarField({
     depthMode,
     variableMode,
     cometMode,
+    auroraMode,
     onZoom,
   ]);
 
