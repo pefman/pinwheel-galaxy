@@ -1,0 +1,167 @@
+"use client";
+
+/**
+ * GalaxyDock — the glass control bar under the hero.
+ *
+ * Replaces the old single "Gravity Well: On/Off" toggle with a compact,
+ * wrap-friendly dock that lets visitors tune the live galaxy:
+ *   - theme (colour palette)   — swatches
+ *   - spiral arms              — stepper 1–8
+ *   - spin speed (rpm)         — stepper 1–20
+ *   - star count               — stepper 120–640
+ *   - gravity well             — toggle (kept from v1)
+ *   - Shuffle (🎲)             — randomises everything and rewrites the URL
+ *
+ * Every change is reflected in the URL, so the current galaxy is shareable by
+ * copying the address bar. `describeConfig` shows what the current galaxy is.
+ */
+
+import { GalaxyConfig, RANGES, THEMES, describeConfig } from "@/lib/galaxyPresets";
+
+function Knob({
+  label,
+  value,
+  onDec,
+  onInc,
+  min,
+  max,
+  unit,
+}: {
+  label: string;
+  value: number;
+  onDec: () => void;
+  onInc: () => void;
+  min: number;
+  max: number;
+  unit?: string;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="w-16 text-left text-white/50">{label}</span>
+      <button
+        onClick={onDec}
+        aria-label={`Decrease ${label}`}
+        className="h-6 w-6 rounded-md border border-white/15 bg-white/5 text-white/70 transition-colors hover:bg-white/15 hover:text-white"
+      >
+        −
+      </button>
+      <span className="w-9 text-center tabular-nums text-sm text-white" aria-live="polite">
+        {value}
+        {unit ?? ""}
+      </span>
+      <button
+        onClick={onInc}
+        aria-label={`Increase ${label}`}
+        className="h-6 w-6 rounded-md border border-white/15 bg-white/5 text-white/70 transition-colors hover:bg-white/15 hover:text-white"
+      >
+        +
+      </button>
+    </div>
+  );
+}
+
+export default function GalaxyDock({
+  config,
+  gravity,
+  applyConfig,
+  toggleGravity,
+  shuffle,
+  label,
+}: {
+  config: GalaxyConfig;
+  gravity: boolean;
+  applyConfig: (p: Partial<GalaxyConfig>) => void;
+  toggleGravity: () => void;
+  shuffle: () => void;
+  label: string | null;
+}) {
+  const inc = (k: keyof Omit<GalaxyConfig, "theme">) => (v: number) => {
+    const { max } = RANGES[k];
+    applyConfig({ [k]: Math.min(v + RANGES[k].step, max) });
+  };
+  const dec = (k: keyof Omit<GalaxyConfig, "theme">) => (v: number) => {
+    const { min } = RANGES[k];
+    applyConfig({ [k]: Math.max(v - RANGES[k].step, min) });
+  };
+
+  return (
+    <div className="absolute bottom-6 left-1/2 z-20 w-[min(680px,92vw)] -translate-x-1/2">
+      <div className="glass rounded-2xl px-3 py-3 text-sm sm:px-5">
+        <p className="mb-2 flex items-center justify-between px-1 text-[11px] font-medium uppercase tracking-widest text-white/45">
+          <span>Galaxy controls</span>
+          <span className="hidden font-mono tabular-nums text-white/35 sm:inline">{label ?? describeConfig(config)}</span>
+        </p>
+
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+          {/* Theme swatches */}
+          <div className="flex items-center gap-2">
+            <span className="w-16 text-left text-white/50">Theme</span>
+            <div className="flex -space-x-2" role="group" aria-label="Galaxy theme">
+              {Object.values(THEMES).map((t) => (
+                <button
+                  key={t.key}
+                  title={t.label}
+                  aria-label={t.label}
+                  aria-pressed={config.theme === t.key}
+                  onClick={() => applyConfig({ theme: t.key })}
+                  className={`h-6 w-6 rounded-full bg-gradient-to-br ${t.gradient} transition-transform ${
+                    config.theme === t.key
+                      ? "scale-110 outline-2 outline-white/70 outline-offset-1"
+                      : "opacity-70 hover:opacity-100"
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+
+          <Knob
+            label="Arms"
+            value={config.arms}
+            min={RANGES.arms.min}
+            max={RANGES.arms.max}
+            onDec={() => dec("arms")(config.arms)}
+            onInc={() => inc("arms")(config.arms)}
+          />
+          <Knob
+            label="Spin"
+            value={config.rpm}
+            min={RANGES.rpm.min}
+            max={RANGES.rpm.max}
+            unit="r"
+            onDec={() => dec("rpm")(config.rpm)}
+            onInc={() => inc("rpm")(config.rpm)}
+          />
+          <Knob
+            label="Stars"
+            value={config.stars}
+            min={RANGES.stars.min}
+            max={RANGES.stars.max}
+            onDec={() => dec("stars")(config.stars)}
+            onInc={() => inc("stars")(config.stars)}
+          />
+
+          <div className="ml-auto flex items-center gap-3">
+            <button
+              onClick={shuffle}
+              title="Generate a random galaxy"
+              aria-label="Shuffle to a random galaxy"
+              className="rounded-full px-3 py-1 font-medium text-white/80 transition-colors hover:bg-white/15 hover:text-white"
+            >
+              🎲 Shuffle
+            </button>
+            <button
+              onClick={toggleGravity}
+              aria-pressed={gravity}
+              className={`relative rounded-full px-3 py-1 font-medium transition-colors ${
+                gravity ? "text-white" : "text-white/40"
+              }`}
+              style={{ backgroundColor: gravity ? "rgba(124,58,237,0.7)" : "rgba(255,255,255,0.1)" }}
+            >
+              Gravity: {gravity ? "On" : "Off"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

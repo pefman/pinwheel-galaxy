@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import StarField from "@/components/StarField";
+import GalaxyDock from "@/components/GalaxyDock";
+import { useGalaxyParams } from "@/lib/useGalaxyParams";
 
 export default function Home() {
-  const [gravity, setGravity] = useState(true);
+  const { config, gravity, applyConfig, toggleGravity, shuffle, shareQuery } =
+    useGalaxyParams();
 
   return (
     <main className="relative min-h-screen overflow-hidden">
@@ -43,7 +45,8 @@ export default function Home() {
           </h1>
           <p className="animate-fade-up opacity-0 animation-delay-300 mx-auto mt-6 max-w-xl text-lg text-white/70">
             Pinwheel Galaxy is a living website that ships new features on its
-            own. Move your cursor — the stars lean into your gravity well.
+            own. Move your cursor — the stars lean into your gravity well. Spin
+            up your own galaxy below; the URL is shareable.
           </p>
 
           <div className="animate-fade-up opacity-0 animation-delay-400 mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -56,22 +59,15 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Gravity-well control */}
-        <div className="absolute bottom-6 left-1/2 z-20 -translate-x-1/2">
-          <div className="glass flex items-center gap-3 rounded-full px-4 py-2 text-sm">
-            <span className="px-1 text-white/60">Move your cursor • click to pulse</span>
-            <button
-              onClick={() => setGravity((g) => !g)}
-              aria-pressed={gravity}
-              className={`relative rounded-full px-3 py-1 font-medium transition-colors ${
-                gravity ? "text-white" : "text-white/40"
-              }`}
-              style={{ backgroundColor: gravity ? "rgba(124,58,237,0.7)" : "rgba(255,255,255,0.1)" }}
-            >
-              Gravity Well: {gravity ? "On" : "Off"}
-            </button>
-          </div>
-        </div>
+        {/* Galaxy control dock — tune theme, arms, spin, stars + gravity */}
+        <GalaxyDock
+          config={config}
+          gravity={gravity}
+          applyConfig={applyConfig}
+          toggleGravity={toggleGravity}
+          shuffle={shuffle}
+          label={shareQuery}
+        />
       </section>
 
       {/* Features */}

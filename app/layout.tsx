@@ -19,7 +19,7 @@ const body = Inter({
 export const metadata: Metadata = {
   title: "Pinwheel Galaxy",
   description:
-    "An ever-evolving website inside a Multica workspace — currently spinning with an interactive gravity-well starfield.",
+    "An ever-evolving website inside a Multica workspace — tune a live interactive gravity-well starfield and share your own galaxy via the URL.",
   metadataBase: new URL("https://pinwheel-galaxy.vercel.app"),
 };
 

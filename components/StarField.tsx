@@ -19,10 +19,8 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { DEFAULT_CONFIG, GalaxyConfig, THEMES } from "@/lib/galaxyPresets";
 
-const STAR_COUNT = 320;
-const ARM_COUNT = 3;
-const GALAXY_RPM = 6; // full rotations per minute — a calm, majestic spin
 const SPRING_K = 0.02; // how strongly stars return to their orbit
 const DAMPING = 0.86; // velocity damping per frame
 const ATTRACT_RADIUS = 220; // px around the cursor that stars feel the well
@@ -53,17 +51,23 @@ interface Pulse {
   life: number; // 1 -> 0 as it expands
 }
 
-function createStars(w: number, h: number): Star[] {
+function createStars(
+  w: number,
+  h: number,
+  arms: number,
+  starCount: number,
+  hues: number[],
+): Star[] {
   const cx = w / 2;
   const cy = h / 2;
   const maxR = Math.min(w, h) * 0.46;
   const stars: Star[] = [];
 
-  for (let i = 0; i < STAR_COUNT; i++) {
+  for (let i = 0; i < starCount; i++) {
     // Distribute along spiral arms with spread so the galaxy looks cloudy.
-    const arm = i % ARM_COUNT;
-    const armOffset = (arm / ARM_COUNT) * Math.PI * 2;
-    const t = i / STAR_COUNT;
+    const arm = i % arms;
+    const armOffset = (arm / arms) * Math.PI * 2;
+    const t = i / starCount;
     // Spiral: outer arms lead inner ones.
     const spiral = t * Math.PI * 2.2;
     const radiusFrac = Math.pow(t, 0.7) * 0.9 + 0.05;
@@ -81,10 +85,20 @@ function createStars(w: number, h: number): Star[] {
       y: cy,
       vx: 0,
       vy: 0,
-      hue: 200 + Math.random() * 90, // violet -> cyan range
+      hue: hueFor(i, starCount, hues),
     });
   }
   return stars;
+}
+
+function hueFor(i: number, n: number, hues: number[]): number {
+  // Spread the theme's hues evenly across all stars.
+  const seg = hues.length - 1;
+  const pos = (i / n) * seg;
+  const lo = Math.floor(pos);
+  const hi = Math.min(lo + 1, seg);
+  const t = pos - lo;
+  return Math.round(hues[lo] + (hues[hi] - hues[lo]) * t);
 }
 
 function useReducedMotion(): boolean {
@@ -99,7 +113,13 @@ function useReducedMotion(): boolean {
   return reduced;
 }
 
-export default function StarField({ active }: { active: boolean }) {
+export default function StarField({
+  active,
+  config = DEFAULT_CONFIG,
+}: {
+  active: boolean;
+  config?: GalaxyConfig;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reduced = useReducedMotion();
 
@@ -112,6 +132,9 @@ export default function StarField({ active }: { active: boolean }) {
     let dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
     let w = 0;
     let h = 0;
+    const { arms, rpm, stars: STAR_COUNT, theme } = config;
+    const hues = (THEMES[theme]?.hues ?? THEMES[DEFAULT_CONFIG.theme].hues) as number[];
+
     let stars: Star[] = [];
     let raf = 0;
     let last = 0;
@@ -126,7 +149,7 @@ export default function StarField({ active }: { active: boolean }) {
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      stars = createStars(w, h);
+      stars = createStars(w, h, arms, STAR_COUNT, hues);
     };
 
     const onMove = (e: MouseEvent) => {
@@ -160,7 +183,7 @@ export default function StarField({ active }: { active: boolean }) {
       last = now;
 
       // Spin the galaxy.
-      galaxyAngle += (GALAXY_RPM * Math.PI * 2) / 60 * dt;
+      galaxyAngle += (rpm * Math.PI * 2) / 60 * dt;
 
       const cx = w / 2;
       const cy = h / 2;
@@ -265,7 +288,7 @@ export default function StarField({ active }: { active: boolean }) {
       window.removeEventListener("touchend", touchEnd);
       window.removeEventListener("resize", resize);
     };
-  }, [active, reduced]);
+  }, [active, reduced, config]);
 
   return (
     <canvas
