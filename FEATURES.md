@@ -5,10 +5,62 @@ additive and dated. New features are added here every evolution cycle.
 
 ---
 
+## Galaxy Presets — Shareable, Deep-Linkable Galaxy Configs
+
+- **Date added:** 2026-08-22
+- **Version:** 0.2.0
+- **Status:** Shipped & live on Vercel — https://pinwheel-galaxy.vercel.app
+
+### What + why
+
+Visitors can tune the live gravity-well galaxy — colour theme, spiral arms,
+rotation speed, and star count — and **share the exact result via the URL**. A
+Shuffle button generates a random galaxy in one click. This is a small but
+memorable, shareable way to make the galaxy feel personal, and it is fully
+additive: the original gravity well is untouched.
+
+### How it works (high-level)
+
+- Config is expressible as URL params: `?theme=&arms=&rpm=&stars=`.
+- `lib/useGalaxyParams.ts` binds config to the URL (shareable deep links, Back/Forward sync).
+- `lib/galaxyPresets.ts` holds the config model, theme palettes, validation, and a shuffle generator.
+- `components/GalaxyDock.tsx` is the glass dock (swatches, steppers, gravity toggle, Shuffle).
+- `StarField` gained an additive `config` prop; defaults are unchanged when no params are present.
+
+### Key files
+
+- `lib/galaxyPresets.ts`, `lib/useGalaxyParams.ts` (new)
+- `components/GalaxyDock.tsx` (new)
+- `components/StarField.tsx`, `app/page.tsx`, `app/layout.tsx`
+
+### User-facing behavior
+
+- Click theme swatches to re-skin the galaxy; stepper the arms/spin/stars to reshape it.
+- 🎲 Shuffle randomises everything and rewrites the URL so it is instantly shareable.
+- The address bar always reflects the current galaxy; copy and share it.
+- Browser Back/Forward re-renders the galaxy from the URL.
+- Visiting without params shows the original 3-arm violet spiral.
+
+### How to test / try it
+
+1. `npm install` then `npm run build` and `npm start`.
+2. Open the glass **Galaxy controls** dock below the hero.
+3. Tune theme / arms / spin / stars; hit **Shuffle**.
+4. Copy the URL, open it elsewhere — the same galaxy loads.
+5. Try a direct link: `/?theme=aurora&arms=5&rpm=9&stars=400`.
+
+See `docs/features/galaxy-presets.md` for the full doc.
+
+---
+
 ## Gravity Well — Interactive Starfield
 
 - **Date added:** 2026-08-22
-- **Status:** Shipped (local build verified; production deploy blocked by token permissions — see "Known limitations")
+- **Status:** Shipped & live on Vercel — https://pinwheel-galaxy.vercel.app
+
+> The earlier "production deploy blocked" note is resolved: the Vercel token was
+> refreshed with project-create rights and the site is now live (see CHANGELOG
+> 0.2.0 and the Galaxy Presets entry above).
 
 ### What + why
 A full-screen canvas background in which stars are arranged into a slowly

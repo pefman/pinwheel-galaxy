@@ -3,7 +3,7 @@
 - **Date added:** 2026-08-22
 - **Version:** 0.1.0
 - **Type:** New feature (additive, client-only)
-- **Status:** Built & locally verified. Production deploy blocked by Vercel token permissions.
+- **Status:** Built & locally verified, and **live on Vercel** — https://pinwheel-galaxy.vercel.app (deploy unblocked in 0.2.0).
 
 ## Short description
 
@@ -94,10 +94,9 @@ All live at the top of `components/StarField.tsx`:
 - Canvas covers only the hero (one viewport tall), not the whole page.
 - On/Off toggle state is not persisted across reloads.
 - Star count is fixed; could scale with viewport area.
-- **Production deploy blocked**: the `VERCEL_API` token has a read-only Vercel
-  role (can list projects, cannot create projects or list teams). The build is
-  complete and verified locally (HTTP 200). Deploy with a token that has
-  project-create rights.
+- **Production deploy: RESOLVED (0.2.0).** The `VERCEL_API` token was
+  refreshed with project-create rights; the site is live at
+  https://pinwheel-galaxy.vercel.app.
 
 ## Success criteria (this cycle)
 
@@ -105,5 +104,5 @@ All live at the top of `components/StarField.tsx`:
 - ✅ Non-breaking; existing page structure intact.
 - ✅ Matches stack (Next.js 15 / TS / Tailwind) and cosmic visual style.
 - ✅ Documented here + in `FEATURES.md` + `CHANGELOG.md`.
-- 🟡 Production deploy pending token permissions.
+- ✅ Production deploy live on Vercel (0.2.0).
 - ✅ Autopilot loop kept alive for the next evolution cycle.
