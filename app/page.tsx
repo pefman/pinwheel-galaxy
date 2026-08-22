@@ -34,6 +34,7 @@ export default function Home() {
   const { config, gravity, applyConfig, toggleGravity, shuffle, shareQuery } =
     useGalaxyParams();
   const [constellations, setConstellations] = useState(false);
+  const [nebula, setNebula] = useState(false);
 
   return (
     <main className="relative min-h-screen overflow-hidden">
@@ -79,7 +80,7 @@ export default function Home() {
 
       {/* Hero with the interactive starfield */}
       <section className="relative flex min-h-screen items-center justify-center px-6">
-        <StarField active={gravity} constellation={constellations} />
+        <StarField active={gravity} constellation={constellations} nebula={nebula} />
 
         <div className="relative z-10 max-w-3xl text-center">
           <p className="animate-fade-up opacity-0 animation-delay-100 text-sm font-medium uppercase tracking-[0.3em] text-cosmos-cyan">
@@ -115,8 +116,22 @@ export default function Home() {
           label={shareQuery}
         />
 
-        {/* Constellation mode toggle */}
-        <div className="absolute bottom-6 left-1/2 z-20 -translate-x-1/2">
+        {/* Hero mode toggles — nebula backdrop + constellation web */}
+        <div className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2">
+          <button
+            onClick={() => setNebula((n) => !n)}
+            aria-pressed={nebula}
+            className={`glass rounded-full px-4 py-2 font-medium transition-colors ${
+              nebula ? "text-white" : "text-white/70"
+            }`}
+            style={{
+              backgroundColor: nebula
+                ? "rgba(168,85,247,0.7)"
+                : "rgba(255,255,255,0.12)",
+            }}
+          >
+            Nebula: {nebula ? "On" : "Off"}
+          </button>
           <button
             onClick={() => setConstellations((c) => !c)}
             aria-pressed={constellations}

@@ -48,6 +48,66 @@ See `docs/features/bug-report-link.md` for the full doc.
 
 ---
 
+## Nebula Drift — Living Depth Backdrop
+
+- **Date added:** 2026-08-22
+- **Version:** 0.4.0
+- **Status:** Shipped & live on Vercel — https://pinwheel-galaxy.vercel.app
+
+### What + why
+
+Behind every galaxy there is only black space. Nebula Drift fills that space
+with a soft, slow-drifting **nebula** — a living depth backdrop that sits
+*behind* the stars and gives the hero a real sense of three-dimensional space
+instead of a flat field of points on black. It is a direct response to the 2026
+anti-homogenization trend: distinctive, layered depth marks a site that was
+designed, not generated. Purely additive and non-breaking — it paints a new draw
+pass behind every existing layer and is **off by default**, so the default
+galaxy looks unchanged.
+
+### How it works (high-level)
+
+- A new `nebula` prop on `StarField` gates an additive draw pass run right after
+  `ctx.clearRect`, before the pulses and stars are painted.
+- `lib/nebula.ts` (new) holds the **pure** geometry: given frame time, canvas
+  size, galaxy centre, and a cursor parallax offset, it returns each drifting
+  cloud's position, colour, and opacity.
+- Three clouds at different **depths** create a parallax sense of 3D — closer
+  layers follow the cursor more than farther ones. Each slowly orbits the centre
+  and gently breathes (per-layer phase offset so they don't pulse in lock-step).
+- Colours derive from the galaxy's **active theme hue**, so the nebula always
+  stays in sync with the selected theme.
+
+### Key files / components
+
+- `lib/nebula.ts`, `lib/nebula.test.ts` (new)
+- `components/StarField.tsx` — new `nebula` prop + draw pass behind the stars.
+- `app/page.tsx` — the **Nebula: On/Off** toggle in the hero control row.
+
+### User-facing behavior
+
+- Click **Nebula: Off → On** (left toggle in the bottom control row) — a soft
+  glow fades in behind the stars.
+- Move the cursor — the clouds drift with parallax depth (near layers follow,
+  far layers lag).
+- Pick a different theme — the nebula re-colours to match (violet, green-aurora,
+  warm-ember, …).
+- Works independently of Gravity Well, Constellation, and Warp Drive.
+
+### How to test / try it
+
+1. `npm install` then `npm run build` and `npm start`.
+2. Open the site, scroll to the hero.
+3. Toggle **Nebula: On** — a soft depth backdrop appears behind the stars.
+4. Move the cursor — the clouds shift with parallax depth.
+5. Switch theme or open a deep link — the nebula re-colours to match.
+6. Toggle Off — the backdrop fades out; the stars remain.
+
+Direct link with Aurora: `?theme=aurora&arms=5&rpm=9&stars=400` (then toggle
+Nebula On). See `docs/features/nebula-drift.md` for the full doc.
+
+---
+
 ## Galaxy Presets — Shareable, Deep-Linkable Galaxy Configs
 
 - **Date added:** 2026-08-22
