@@ -4,6 +4,46 @@ All notable changes to **Pinwheel Galaxy** are documented here. This project
 follows [Keep a Changelog](https://keepachangelog.com) conventions, plus a
 "Shipped" section for ongoing autonomous evolution.
 
+## [0.12.0] — 2026-08-22
+
+### Added
+
+- **Cosmic Soundscape** — the galaxy now has a *sound*. A generative,
+  reactive ambient soundscape synthesises live tone-by-tone with the Web Audio
+  API (no samples, no network, no dependencies), and it tracks the visible
+  galaxy: the theme sets the musical scale, the spin speed sets the tempo, the
+  star density sets the sparkle rate, and the sky layers add their voice — the
+  nebula a sustained pad, constellations a slow arpeggio, variable stars
+  high-octave twinkle, and a comet an upward sweep. It is a pure function of
+  the galaxy (`lib/soundscape.ts`), so it is deterministic, backend-free, and
+  shareable via the existing recipe/URL system (`?sound=on` pre-arms the
+  toggle).
+  - `lib/soundscape.ts` (new) — the **pure** musical model: each theme maps to
+    a distinct modal scale + tonic, `composeVoice` derives tempo from rpm and
+    sparkle density from star count and maps layer toggles to voice triggers,
+    plus `midiToFreq` and `describeVoice`. `lib/soundscape.test.ts` (new, 8
+    tests) covers the scale/tonic mapping, tempo and density ranges, the
+    layer triggers, determinism, and the description.
+  - `lib/useSoundscape.ts` (new) — the client runtime: a tiny `SoundscapeEngine`
+    that owns a few oscillators + gain nodes, rebuilds the pad and re-arms the
+    per-beat scheduler whenever the voice changes, and schedules shimmer /
+    twinkle / comet events on tempo. **Muted by default** and gated behind the
+    first user gesture (respecting autoplay policies), with graceful
+    degradation when `AudioContext` is unavailable or `prefers-reduced-motion`
+    is on.
+  - `lib/useGalaxyParams.ts` gained a shareable `?sound=` toggle (muted by
+    default, so a quiet galaxy keeps a tidy URL) and a `toggleSound` setter.
+  - `app/page.tsx` drives `useSoundscape(config, recipe, sound)` and adds a
+    compact **Sound** chip to the Galaxy Dock; `installSoundscapeGesture()`
+    revives the audio context on the first click/keypress.
+
+### Notes
+
+- Additive and non-breaking: the starfield, dock, presets, recipes and Galaxy
+  of the Day are untouched and the default galaxy looks and sounds exactly as
+  before (silent, by design). Built, locally verified (`npm run build` +
+  `npm test` 90/90), and deployed to Vercel production.
+
 ## [0.11.0] — 2026-08-22
 
 ### Added

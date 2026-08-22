@@ -31,6 +31,7 @@ import {
 
 const GRAVITY_PARAM = "gravity";
 const ZOOM_PARAM = "z";
+const SOUND_PARAM = "sound";
 
 export function useGalaxyParams() {
   const search =
@@ -50,6 +51,13 @@ export function useGalaxyParams() {
   const [zoom, setZoomState] = useState<number>(() =>
     paramsToZoom(new URLSearchParams(search).get(ZOOM_PARAM)) ?? ZOOM_DEFAULT,
   );
+  // Cosmic Soundscape: read the shareable `?sound=` param on mount. Muted by
+  // default (audio never starts unprompted); a shared `?sound=on` link just
+  // pre-arms the toggle — audio still waits for a user gesture.
+  const [sound, setSound] = useState<boolean>(() => {
+    const raw = new URLSearchParams(search).get(SOUND_PARAM);
+    return raw === "on";
+  });
   // Galaxy Recipe: read every layer toggle on mount so a shared link re-hydrates
   // the exact galaxy (all active layers) instead of just the spiral config.
   const [recipe, setRecipe] = useState<GalaxyRecipe>(() =>
@@ -65,6 +73,7 @@ export function useGalaxyParams() {
       setGravity(raw === null ? true : raw !== "0" && raw !== "false");
       setZoomState(paramsToZoom(usp.get(ZOOM_PARAM)) ?? ZOOM_DEFAULT);
       setRecipe(parseRecipe(usp));
+      setSound(usp.get(SOUND_PARAM) === "on");
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -83,6 +92,8 @@ export function useGalaxyParams() {
     usp.set("stars", String(config.stars));
     usp.set(GRAVITY_PARAM, gravity ? "1" : "0");
     usp.set(ZOOM_PARAM, zoom.toFixed(2));
+    // The sound toggle is written only when on, so a quiet galaxy stays tidy.
+    if (sound) usp.set(SOUND_PARAM, "on");
     // Only the on-layers are written, keeping a plain galaxy's URL tidy.
     recipeToParams(recipe).forEach((value, key) => usp.set(key, value));
     const query = usp.toString();
@@ -108,6 +119,9 @@ export function useGalaxyParams() {
 
   const toggleGravity = useCallback(() => setGravity((g) => !g), []);
 
+  // Flip the Cosmic Soundscape toggle; the persist effect writes it to the URL.
+  const toggleSound = useCallback(() => setSound((s) => !s), []);
+
   const label = useMemo(() => {
     if (typeof window === "undefined") return null;
     const usp = new URLSearchParams(window.location.search);
@@ -124,6 +138,8 @@ export function useGalaxyParams() {
     toggleGravity,
     toggle,
     setZoom,
+    toggleSound,
+    sound,
     shareQuery: label,
   };
 }

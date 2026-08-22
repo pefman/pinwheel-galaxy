@@ -5,6 +5,7 @@ import StarField from "@/components/StarField";
 import GalaxyDock from "@/components/GalaxyDock";
 import { useGalaxyParams } from "@/lib/useGalaxyParams";
 import { galaxyOfDay, dailyDeepLink, dayKey, DailyGalaxy } from "@/lib/galaxyOfDay";
+import { useSoundscape, installSoundscapeGesture } from "@/lib/useSoundscape";
 
 // "Report a bug" sends visitors straight to a pre-filled GitHub issue so bugs
 // land in the tracker where the autopilot picks them up. The body is a small
@@ -42,8 +43,15 @@ export default function Home() {
     shuffle,
     toggle,
     setZoom,
+    sound,
+    toggleSound,
     shareQuery,
   } = useGalaxyParams();
+
+  // The Cosmic Soundscape runtime: turns the live galaxy into sound. Muted by
+  // default; audio starts on the first user gesture (see installSoundscapeGesture).
+  useSoundscape(config, recipe, sound);
+  installSoundscapeGesture();
 
   return (
     <main className="relative min-h-screen overflow-hidden">
@@ -140,6 +148,12 @@ export default function Home() {
             { label: "Depth", active: recipe.depth, onToggle: () => toggle("depth"), color: "rgba(132,204,227,0.7)" },
             { label: "Variable Stars", active: recipe.variable, onToggle: () => toggle("variable"), color: "rgba(250,204,21,0.75)" },
             { label: "Comet", active: recipe.comet, onToggle: () => toggle("comet"), color: "rgba(134,239,233,0.85)" },
+            {
+              label: "Sound",
+              active: sound,
+              onToggle: toggleSound,
+              color: "rgba(167,139,250,0.85)",
+            },
           ]}
         />
       </section>

@@ -5,6 +5,57 @@ additive and dated. New features are added here every evolution cycle.
 
 ---
 
+## Cosmic Soundscape — a generative, reactive ambient soundscape
+
+- **Date added:** 2026-08-22
+- **Version:** 0.12.0
+- **Status:** Shipped & live on Vercel — https://pinwheel-galaxy.vercel.app
+
+### What + why
+
+Pinwheel Galaxy is a *visual* generative instrument — every other layer is
+something you watch. The Cosmic Soundscape gives the galaxy a second sense: a
+generative ambient soundscape that plays the galaxy the way the starfield
+renders it. Category generative tools (scaffolding instruments like Aeon,
+EventField Web, and the wave of Web-Audio art sites) show that live,
+sample-free synthesis is the natural audio for a live-generated visual — it
+stays in tune with whatever is being generated, exactly as this feature stays
+in tune with the visible galaxy. It turns a glance into an experience and is a
+fresh, on-brand dimension of the engine with zero backend cost.
+
+### How it works (high-level)
+
+- `lib/soundscape.ts` holds the **pure**, deterministic model. Every theme
+  maps to a distinct modal scale (violet → minor pentatonic, aurora → lydian,
+  ember → mixolydian, azure → dorian, monochrome → whole-tone) with its own
+  tonic, so the sound is always consonant. `composeVoice` derives the tempo
+  (BPM) from the spin speed and the sparkle density from the star count, and
+  maps the sky-layer toggles to voice triggers: nebula → a sustained pad,
+  constellations → a slow arpeggio walking the scale, variable stars → bright
+  high-octave twinkle, comet → periodic upward sweeps. The same galaxy always
+  yields the same voice, which is what makes the sound a faithful reflection of
+  the visible galaxy rather than decoration.
+- `lib/useSoundscape.ts` is the client runtime: a tiny `SoundscapeEngine` that
+  owns a few oscillators and gain nodes, synthesising every tone at runtime
+  (Web Audio API, no samples, no dependencies). It rebuilds the pad and
+  re-arms a per-beat scheduler whenever the voice changes, scheduling shimmer /
+  twinkle / comet events on tempo.
+- **Muted by default and gated behind the first user gesture** — both polite
+  and required by browser autoplay policies. A `?sound=on` deep link
+  pre-arms the toggle; audio still waits for a click/keypress before it starts.
+  Degrades gracefully: if `AudioContext` is unavailable or
+  `prefers-reduced-motion` is on, the galaxy works perfectly well in silence.
+
+### Key files / components
+
+- `lib/soundscape.ts` (new) and `lib/soundscape.test.ts` (new, 8 tests).
+- `lib/useSoundscape.ts` (new) — the `useSoundscape` hook + `SoundscapeEngine`.
+- `lib/useGalaxyParams.ts` gained the shareable `?sound=` toggle +
+  `toggleSound`.
+- `app/page.tsx` drives the hook and adds a **Sound** chip to the Galaxy Dock.
+
+---
+
 ## Galaxy of the Day — a fresh, seeded galaxy every day
 
 - **Date added:** 2026-08-22
