@@ -5,6 +5,64 @@ additive and dated. New features are added here every evolution cycle.
 
 ---
 
+## Shooting Stars — Meteors Across the Deep Sky
+
+- **Date added:** 2026-08-22
+- **Version:** 0.5.0
+- **Status:** Shipped & live on Vercel — https://pinwheel-galaxy.vercel.app
+
+### What + why
+
+Behind every galaxy there has been only black space. Shooting Stars lets
+occasional **meteors streak across that deep sky** — a bright head fading into a
+long, soft tail — so the hero feels like looking up at a living night rather
+than a fixed backdrop. It is a small, delightful, purely additive touch and it
+is **off by default**, so the default galaxy looks unchanged. It responds to the
+2026 anti-homogenization trend: a little named, atmospheric motion that marks a
+site that was designed, not generated.
+
+### How it works (high-level)
+
+- A new `shooting` prop on `StarField` gates an additive draw pass run right
+  after `ctx.clearRect`, *behind* the nebula, pulses, constellation web, warp
+  streaks and stars — so the interactive galaxy always stays the foreground.
+- `lib/shootingStars.ts` (new) holds the **pure** logic: given the frame clock,
+  canvas size, intensity, a stable seed and the theme hues, it returns the list
+  of meteors alive at that instant. It never holds mutable animation state.
+- The effect is **deterministic**: a seeded PRNG (`mulberry32`) builds a fixed
+  spawn timeline, and each frame we simply ask "which meteors are alive now?"
+  so meteors flow smoothly across the sky instead of flickering.
+- Each meteor spawns just above the top edge, travels down and to one side at a
+  random speed, and lives 0.5–1.1 s. Its streak length follows `speed × life`,
+  and its colour is drawn from the galaxy's active theme hues.
+
+### Key files / components
+
+- `lib/shootingStars.ts`, `lib/shootingStars.test.ts` (new)
+- `components/StarField.tsx` — new `shooting` prop + draw pass behind the stars.
+- `app/page.tsx` — the **Shooting Stars: On/Off** toggle in the hero control row.
+
+### User-facing behavior
+
+- Click **Shooting Stars: Off → On** (right toggle in the bottom control row) —
+  meteors begin to cross the sky.
+- Pick a different theme — the meteor heads re-colour to match (violet, green
+  aurora, warm ember, …).
+- Works independently of Gravity Well, Constellation, Warp Drive, and Nebula
+  Drift.
+
+### How to test / try it
+
+1. `npm install` then `npm run build` and `npm start`.
+2. Open the site, scroll to the hero.
+3. Toggle **Shooting Stars: On** — meteors streak across the deep sky.
+4. Switch theme — the meteor heads re-colour to match.
+5. Toggle Off — the sky goes calm again; the stars remain.
+
+See `docs/features/shooting-stars.md` for the full doc.
+
+---
+
 ## Bug Report Link — Straight to the GitHub Tracker
 
 - **Date added:** 2026-08-22

@@ -4,6 +4,33 @@ All notable changes to **Pinwheel Galaxy** are documented here. This project
 follows [Keep a Changelog](https://keepachangelog.com) conventions, plus a
 "Shipped" section for ongoing autonomous evolution.
 
+## [0.5.0] — 2026-08-22
+
+### Added
+
+- **Shooting Stars** — occasional meteors streak across the hero's deep sky,
+  so the galaxy sits under a living night rather than flat black. A bright head
+  fades into a long, soft tail; each meteor spawns just above the top edge and
+  travels down and to one side at a random speed, its streak length following
+  `speed × life`. Colours are drawn from the active theme, so meteor heads
+  re-colour with the selected palette.
+  - `lib/shootingStars.ts` (new) — the **pure** logic: a seeded PRNG builds a
+    deterministic spawn timeline and `computeShootingStars()` returns the meteors
+    alive at a given instant (no mutable animation state). `lib/shootingStars.test.ts`
+    (new) covers determinism, intensity scaling, on-screen bounds, theme hues, and
+    the zero-intensity case.
+  - `components/StarField.tsx` gained an additive `shooting` prop and a draw pass
+    painted *behind* every existing layer (nebula, pulses, constellation, warp,
+    stars), so the interactive galaxy stays the foreground.
+  - `app/page.tsx` — a new **Shooting Stars: On/Off** toggle in the hero control
+    row.
+
+### Notes
+
+- All changes are additive and non-breaking; the default galaxy is visually
+  unchanged. Shooting Stars is off by default and orthogonal to Gravity Well,
+  Constellation, Warp Drive, and Nebula Drift. Deployed to Vercel production.
+
 ## [0.4.0] — 2026-08-22
 
 ### Added

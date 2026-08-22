@@ -35,6 +35,7 @@ export default function Home() {
     useGalaxyParams();
   const [constellations, setConstellations] = useState(false);
   const [nebula, setNebula] = useState(false);
+  const [shooting, setShooting] = useState(false);
 
   return (
     <main className="relative min-h-screen overflow-hidden">
@@ -80,7 +81,12 @@ export default function Home() {
 
       {/* Hero with the interactive starfield */}
       <section className="relative flex min-h-screen items-center justify-center px-6">
-        <StarField active={gravity} constellation={constellations} nebula={nebula} />
+        <StarField
+          active={gravity}
+          constellation={constellations}
+          nebula={nebula}
+          shooting={shooting}
+        />
 
         <div className="relative z-10 max-w-3xl text-center">
           <p className="animate-fade-up opacity-0 animation-delay-100 text-sm font-medium uppercase tracking-[0.3em] text-cosmos-cyan">
@@ -145,6 +151,20 @@ export default function Home() {
             }}
           >
             Constellations: {constellations ? "On" : "Off"}
+          </button>
+          <button
+            onClick={() => setShooting((s) => !s)}
+            aria-pressed={shooting}
+            className={`glass rounded-full px-4 py-2 font-medium transition-colors ${
+              shooting ? "text-white" : "text-white/70"
+            }`}
+            style={{
+              backgroundColor: shooting
+                ? "rgba(167,139,250,0.7)"
+                : "rgba(255,255,255,0.12)",
+            }}
+          >
+            Shooting Stars: {shooting ? "On" : "Off"}
           </button>
         </div>
       </section>

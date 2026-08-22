@@ -24,6 +24,10 @@ import {
   computeNebulaClouds,
   NebulaCloud,
 } from "@/lib/nebula";
+import {
+  computeShootingStars,
+  ShootingStar,
+} from "@/lib/shootingStars";
 
 const SPRING_K = 0.02; // how strongly stars return to their orbit
 const DAMPING = 0.86; // velocity damping per frame
@@ -133,11 +137,13 @@ export default function StarField({
   config = DEFAULT_CONFIG,
   constellation = false,
   nebula = false,
+  shooting = false,
 }: {
   active: boolean;
   config?: GalaxyConfig;
   constellation?: boolean;
   nebula?: boolean;
+  shooting?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reduced = useReducedMotion();
@@ -168,6 +174,8 @@ export default function StarField({
     // Nebula Drift: running clock + smoothed cursor parallax offset.
     let nebulaTime = 0;
     const nebulaParallax = { x: 0, y: 0 };
+    // Shooting Stars: a running clock for the deterministic spawn timeline.
+    let shootingTime = 0;
 
     const resize = () => {
       dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
@@ -268,6 +276,48 @@ export default function StarField({
 
       // Draw.
       ctx.clearRect(0, 0, w, h);
+
+      // Shooting Stars: occasional meteors streak across the deep sky, drawn
+      // *behind* every other layer so the interactive galaxy stays foreground.
+      // The spawn timeline is a pure function of the running clock, so meteors
+      // flow smoothly rather than flickering frame to frame.
+      let meteors: ShootingStar[] = [];
+      if (shooting) {
+        shootingTime += dt;
+        meteors = computeShootingStars({
+          time: shootingTime,
+          width: w,
+          height: h,
+          intensity: 1.4,
+          seed: 13,
+          hues,
+        });
+        for (const m of meteors) {
+          const nx = Math.cos(m.angle);
+          const ny = Math.sin(m.angle);
+          const tailX = m.x - nx * m.len;
+          const tailY = m.y - ny * m.len;
+          const grad = ctx.createLinearGradient(tailX, tailY, m.x, m.y);
+          grad.addColorStop(0, `hsla(${m.hue}, 20%, 100%, 0)`);
+          grad.addColorStop(0.7, `hsla(${m.hue}, 25%, 90%, 0.55)`);
+          grad.addColorStop(1, `hsla(${m.hue}, 30%, 98%, 0.95)`);
+          ctx.strokeStyle = grad;
+          ctx.lineWidth = m.width;
+          ctx.lineCap = "round";
+          ctx.beginPath();
+          ctx.moveTo(tailX, tailY);
+          ctx.lineTo(m.x, m.y);
+          ctx.stroke();
+          // Bright head glow.
+          const headGrad = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, m.width * 4);
+          headGrad.addColorStop(0, `hsla(${m.hue}, 30%, 98%, 0.9)`);
+          headGrad.addColorStop(1, `hsla(${m.hue}, 30%, 98%, 0)`);
+          ctx.fillStyle = headGrad;
+          ctx.beginPath();
+          ctx.arc(m.x, m.y, m.width * 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
 
       // Nebula Drift: living depth backdrop painted *behind* everything. A
       // slow, breathing, parallax-shifting glow that is coloured from the
@@ -437,7 +487,7 @@ export default function StarField({
       window.removeEventListener("touchend", touchEnd);
       window.removeEventListener("resize", resize);
     };
-  }, [active, reduced, config, nebula]);
+  }, [active, reduced, config, nebula, shooting]);
 
   return (
     <canvas
