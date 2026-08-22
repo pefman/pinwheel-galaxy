@@ -5,6 +5,48 @@ additive and dated. New features are added here every evolution cycle.
 
 ---
 
+## Galaxy of the Day — a fresh, seeded galaxy every day
+
+- **Date added:** 2026-08-22
+- **Version:** 0.11.0
+- **Status:** Shipped & live on Vercel — https://pinwheel-galaxy.vercel.app
+
+### What + why
+
+Generative tools lose people after a few generations because there is no
+reason to come back. The antidote used by the category (NightCafe's Promptle,
+Prompt Royale, constraint engines) is a single fresh, **shared** challenge that
+refreshes once per calendar day: everyone sees the same thing today, a new one
+tomorrow, and it costs nothing to run. For Pinwheel Galaxy this is a natural
+fit — the engine is already time-based and generative, and the shipped Galaxy
+Recipes (v0.10.0) already made every galaxy a deep link.
+
+### How it works (high-level)
+
+- `lib/galaxyOfDay.ts` (new) holds the **pure**, deterministic logic: a day key
+  (`YYYY-MM-DD` in local time), a 32-bit FNV-1a `hashSeed`, a `mulberry32`
+  PRNG seeded by the day, `dailyConfig` (snapped to real preset knobs),
+  `pickLayers` (a low-bias subset of the sky layers), `dailyPrompt` (a short
+  creative constraint), `galaxyOfDay`, and `dailyDeepLink` (the shareable
+  `/?theme=&arms=&rpm=&stars=&<layers>=on` URL). `lib/galaxyOfDay.test.ts`
+  (new, 12 tests) covers determinism, range, per-day stability, subset budget,
+  and deep-link round-tripping.
+- The card is fully **client-side and backend-free**. It computes today's
+  galaxy from the local date, shows the daily prompt + a one-line summary, and
+  links to a deep link that re-hydrates the exact galaxy via the existing
+  recipe system. A `setTimeout`/`setInterval` flips the card to the new galaxy
+  at local midnight.
+- Additive and non-breaking: the starfield, dock, presets and recipe system are
+  untouched, and the default galaxy looks exactly as before.
+
+### Key files / components
+
+- `lib/galaxyOfDay.ts` (new) and `lib/galaxyOfDay.test.ts` (new, 12 tests).
+- `app/page.tsx` gained a `GalaxyOfTheDay` section (prompt, summary, "Open
+  today's galaxy" deep link, and a "Copy shareable link" button).
+
+---
+
 ## Shareable Galaxy Recipes — Full-State Deep Links
 
 - **Date added:** 2026-08-22

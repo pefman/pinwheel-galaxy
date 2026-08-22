@@ -4,6 +4,37 @@ All notable changes to **Pinwheel Galaxy** are documented here. This project
 follows [Keep a Changelog](https://keepachangelog.com) conventions, plus a
 "Shipped" section for ongoing autonomous evolution.
 
+## [0.11.0] — 2026-08-22
+
+### Added
+
+- **Galaxy of the Day** — a fresh, seeded galaxy that refreshes once per
+  calendar day, giving visitors a shared reason to return. Everyone sees the
+  same galaxy today and a new one tomorrow, with no backend and no stored state.
+  It is the natural companion to the shipped Galaxy Recipes (v0.10.0): the daily
+  galaxy is just another deep link that re-hydrates exactly.
+  - `lib/galaxyOfDay.ts` (new) — the **pure** logic: a local-time `dayKey`
+    (`YYYY-MM-DD`), a stable 32-bit FNV-1a `hashSeed`, a `mulberry32` PRNG
+    seeded by the day, `dailyConfig` (arms/rpm/stars snapped to the real preset
+    knobs, theme drawn from the preset palettes), `pickLayers` (a low-bias
+    subset of the sky layers, 0–3), `dailyPrompt` (a short creative constraint
+    drawn from a fixed catalogue), `galaxyOfDay` (the full daily result) and
+    `dailyDeepLink` (the shareable `/?theme=&arms=&rpm=&stars=&<layers>=on`
+    URL). `lib/galaxyOfDay.test.ts` (new, 12 tests) covers determinism, range,
+    per-day stability, subset budget, and deep-link round-tripping.
+  - `app/page.tsx` gained a `GalaxyOfTheDay` section: the daily prompt chip, a
+    one-line summary of today's galaxy, an "Open today's galaxy" deep link
+    (opens the exact galaxy in a new tab), and a "Copy shareable link" button.
+    It is fully client-side and flips to the new galaxy at local midnight via a
+    `setTimeout`/`setInterval` tick.
+
+### Notes
+
+- Additive and non-breaking; the starfield, dock, presets and recipe system are
+  untouched and the default galaxy looks exactly as before. Built, locally
+  verified (`npm run build` + `npm test` 82/82), and deployed to Vercel
+  production.
+
 ## [0.10.0] — 2026-08-22
 
 ### Added
