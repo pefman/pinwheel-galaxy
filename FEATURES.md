@@ -5,6 +5,86 @@ additive and dated. New features are added here every evolution cycle.
 
 ---
 
+## Shareable Galaxy Prints — export your galaxy as a branded image
+
+- **Date added:** 2026-08-22
+- **Version:** 0.13.0
+- **Status:** Shipped & live on Vercel — https://pinwheel-galaxy.vercel.app
+
+### What + why
+
+Every other layer in Pinwheel Galaxy is something you *watch* — the galaxy is a
+visual, generative instrument. The one gap was that a beautiful galaxy you
+spent time tuning lived and died in the browser: the Shareable Galaxy Recipes
+(v0.10.0) let you share the *link*, but not the *image*. People share things
+they can see. Shareable Galaxy Prints closes that gap — it lets you export the
+galaxy you are looking at as a polished, branded PNG you can drop into a social
+post, a message, or a mood board. It is the natural sibling of the deep-link
+recipes: the link says “come make your own”; the print says “here it is”.
+
+### How it works (high-level)
+
+- `lib/exportCard.ts` holds the **pure**, deterministic composition model. When
+  asked to export, the current galaxy is fitted into a framed image window via
+  `computeCover` (a cover-fit: it fills the frame and crops the excess, so the
+  galaxy never distorts), wrapped text is measured font-aware with `wrapText`,
+  and the whole card is assembled as a plain data URL. The deep link is
+  canonicalised with `deepLink` and the galaxy is labelled with `describePrint`
+  (default labels stripped so a custom galaxy reads cleanly). Nothing here touches
+  the DOM, canvas, or network — it is a pure function of (galaxy, URL).
+- `components/GalaxyShareCard.tsx` is the client runtime. It takes a
+  `getCanvas` callback (to read the live starfield canvas), the `deepLinkUrl`,
+  and a human-readable `description`, and renders a small **Share** popover with
+  three exits: **Download PNG** (saves the 1080×1350 card), **Web Share**
+  (the native OS share sheet, when the browser supports it), and **Copy link**
+  (copies the deep link to the clipboard). The component owns only its own
+  preview state; it is otherwise a pure function of its props.
+- `components/StarField.tsx` gained an optional `canvasRef` callback so the
+  parent can forward the live canvas element. The internal canvas ref was renamed
+  to `canvasElementRef` to avoid a clash with the new prop.
+- `components/GalaxyDock.tsx` gained an optional `share` slot; the **Share**
+  button appears next to Shuffle / Gravity only when a control is passed, so the
+  dock stays lean by default.
+- `app/page.tsx` forwards the live canvas to StarField, builds the current deep
+  link from the page URL, and renders `GalaxyShareCard` in the dock with a
+  description derived from `describeConfig` + `describeRecipe`.
+
+### Key files / components
+
+- `lib/exportCard.ts` (new) — pure composition model, unit-tested.
+- `lib/exportCard.test.ts` (new, 10 tests) — cover geometry, wrapping, window
+  math, deep-link composition, and description.
+- `components/GalaxyShareCard.tsx` (new) — client runtime.
+- `components/StarField.tsx` — optional `canvasRef` callback.
+- `components/GalaxyDock.tsx` — optional `share` slot.
+- `app/page.tsx` — wiring.
+
+### User-facing behavior
+
+- A **Share** button (⛶) sits at the right end of the Galaxy Dock, next to
+  Shuffle and the Gravity toggle. Clicking it opens a compact popover showing a
+  live preview of the print with three buttons: Download PNG, Web Share (hidden
+  automatically when unsupported), and Copy link (with a brief “Copied!”
+  confirmation).
+
+### How to test / try it
+
+1. Open the site, tune a galaxy (change theme, arms, spin, toggle nebula,
+   etc.).
+2. Click **Share** in the dock. The preview should reflect the current galaxy.
+3. Click **Download PNG** — a 1080×1350 branded image downloads.
+4. Click **Copy link** — the current deep link is copied; paste it in a new tab
+   to re-hydrate the exact galaxy.
+
+### Known limitations / follow-ups
+
+- The export is a single fixed portrait aspect (1080×1350); landscape and
+  story formats are a natural follow-up.
+- Web Share is only available in secure contexts with user-gesture support; on
+  unsupported browsers the button is hidden and the flow falls back to Copy link.
+
+---
+
 ## Cosmic Soundscape — a generative, reactive ambient soundscape
 
 - **Date added:** 2026-08-22

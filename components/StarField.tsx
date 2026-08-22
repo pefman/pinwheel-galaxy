@@ -186,6 +186,7 @@ export default function StarField({
   variableMode = false,
   cometMode = false,
   onZoom,
+  canvasRef,
 }: {
   active: boolean;
   config?: GalaxyConfig;
@@ -203,12 +204,15 @@ export default function StarField({
   cometMode?: boolean;
   /** Called with the live zoom whenever it changes, so the parent can share it. */
   onZoom?: (zoom: number) => void;
+  /** Forwarded to the canvas element, so the parent can capture it (e.g. for a
+   * shareable image export). Never triggers a re-render of the starfield. */
+  canvasRef?: (el: HTMLCanvasElement | null) => void;
 }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasElementRef = useRef<HTMLCanvasElement>(null);
   const reduced = useReducedMotion();
 
   useEffect(() => {
-    const canvas = canvasRef.current;
+    const canvas = canvasElementRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
@@ -789,7 +793,10 @@ export default function StarField({
 
   return (
     <canvas
-      ref={canvasRef}
+      ref={(el) => {
+        canvasElementRef.current = el;
+        canvasRef?.(el);
+      }}
       aria-hidden="true"
       className="pointer-events-[auto] absolute inset-0 h-full w-full"
     />

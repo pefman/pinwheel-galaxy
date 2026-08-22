@@ -1,5 +1,7 @@
 "use client";
 
+import type React from "react";
+
 /**
  * GalaxyDock — the glass control bar under the hero.
  *
@@ -81,6 +83,7 @@ export default function GalaxyDock({
   shuffle,
   label,
   environment,
+  share,
 }: {
   config: GalaxyConfig;
   gravity: boolean;
@@ -89,6 +92,8 @@ export default function GalaxyDock({
   shuffle: () => void;
   label: string | null;
   environment?: EnvironmentToggle[];
+  /** Optional “Share as an image” control, rendered next to Shuffle / Gravity. */
+  share?: React.ReactNode;
 }) {
   const inc = (k: keyof Omit<GalaxyConfig, "theme">) => (v: number) => {
     const { max } = RANGES[k];
@@ -157,6 +162,10 @@ export default function GalaxyDock({
           />
 
           <div className="ml-auto flex items-center gap-3">
+            {/* Optional share-as-image control. GalaxyShareCard renders its own
+                button + popover, so we only surface it when the parent passes
+                `share`. */}
+            {share}
             <button
               onClick={shuffle}
               title="Generate a random galaxy"
