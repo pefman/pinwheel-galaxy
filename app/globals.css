@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: #05010f;
+  color: #e9e5ff;
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Soft cosmic glow used by several surface elements. */
+.cosmos-glow {
+  box-shadow:
+    0 0 0 1px rgba(124, 58, 237, 0.25),
+    0 20px 60px -20px rgba(124, 58, 237, 0.6);
+}
+
+.text-gradient {
+  background: linear-gradient(
+    100deg,
+    #c4b5fd 0%,
+    #f0abfc 45%,
+    #67e8f9 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.glass {
+  background: rgba(15, 8, 40, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
