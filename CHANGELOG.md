@@ -4,6 +4,25 @@ All notable changes to **Pinwheel Galaxy** are documented here. This project
 follows [Keep a Changelog](https://keepachangelog.com) conventions, plus a
 "Shipped" section for ongoing autonomous evolution.
 
+## [0.4.0] — 2026-08-22
+
+### Added
+
+- **Nebula Drift** — a living depth backdrop. A soft, slow-drifting nebula is
+  painted *behind* the stars, giving the hero a sense of 3D space instead of a
+  flat field on black. Three clouds at different depths create a cursor
+  parallax; each orbits the galaxy centre and gently breathes. Colours derive
+  from the active theme, so the nebula always stays in sync with the selected
+  palette. Controlled by a new **Nebula: On/Off** toggle next to Constellations.
+  Pure geometry lives in `lib/nebula.ts` (unit-tested); StarField gains an
+  additive `nebula` prop and a draw pass behind every existing layer.
+
+### Notes
+
+- Additive and non-breaking; the default galaxy is visually unchanged (the
+  backdrop is off by default). Orthogonal to Gravity Well, Constellation, and
+  Warp Drive.
+
 ## [0.3.0] — 2026-08-22
 
 ### Added

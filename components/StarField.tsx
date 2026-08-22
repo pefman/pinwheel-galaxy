@@ -20,6 +20,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { DEFAULT_CONFIG, GalaxyConfig, THEMES } from "@/lib/galaxyPresets";
+import {
+  computeNebulaClouds,
+  NebulaCloud,
+} from "@/lib/nebula";
 
 const SPRING_K = 0.02; // how strongly stars return to their orbit
 const DAMPING = 0.86; // velocity damping per frame
@@ -128,10 +132,12 @@ export default function StarField({
   active,
   config = DEFAULT_CONFIG,
   constellation = false,
+  nebula = false,
 }: {
   active: boolean;
   config?: GalaxyConfig;
   constellation?: boolean;
+  nebula?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reduced = useReducedMotion();
@@ -159,6 +165,9 @@ export default function StarField({
     const mouse = { x: -9999, y: -9999, active: false };
     const pulses: Pulse[] = [];
     let galaxyAngle = 0;
+    // Nebula Drift: running clock + smoothed cursor parallax offset.
+    let nebulaTime = 0;
+    const nebulaParallax = { x: 0, y: 0 };
 
     const resize = () => {
       dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
@@ -260,6 +269,51 @@ export default function StarField({
       // Draw.
       ctx.clearRect(0, 0, w, h);
 
+      // Nebula Drift: living depth backdrop painted *behind* everything. A
+      // slow, breathing, parallax-shifting glow that is coloured from the
+      // active theme — pure additive atmosphere, never touching the stars.
+      let nebulaClouds: NebulaCloud[] = [];
+      if (nebula) {
+        nebulaTime += dt;
+        const parX = reduced || !mouse.active ? 0 : cx - mouse.x;
+        const parY = reduced || !mouse.active ? 0 : cy - mouse.y;
+        // Ease toward the target so the clouds drift rather than snap.
+        nebulaParallax.x += (parX - nebulaParallax.x) * 0.08;
+        nebulaParallax.y += (parY - nebulaParallax.y) * 0.08;
+        nebulaClouds = computeNebulaClouds({
+          time: nebulaTime,
+          width: w,
+          height: h,
+          centerX: cx,
+          centerY: cy,
+          parallaxX: nebulaParallax.x,
+          parallaxY: nebulaParallax.y,
+          hues,
+        });
+        for (const c of nebulaClouds) {
+          const grad = ctx.createRadialGradient(
+            c.x,
+            c.y,
+            0,
+            c.x,
+            c.y,
+            c.radius,
+          );
+          grad.addColorStop(
+            0,
+            `hsla(${c.hue}, 80%, 48%, ${c.alpha})`,
+          );
+          grad.addColorStop(
+            0.55,
+            `hsla(${(c.hue + 40) % 360}, 80%, 42%, ${c.alpha * 0.45})`,
+          );
+          grad.addColorStop(1, `hsla(${c.hue}, 80%, 30%, 0)`);
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
       for (const p of pulses) {
         const grad = ctx.createRadialGradient(p.x, p.y, p.radius - PULSE_WIDTH, p.x, p.y, p.radius + PULSE_WIDTH);
         grad.addColorStop(0, `hsla(190, 90%, 70%, 0)`);
@@ -372,7 +426,7 @@ export default function StarField({
       window.removeEventListener("touchend", touchEnd);
       window.removeEventListener("resize", resize);
     };
-  }, [active, reduced, config]);
+  }, [active, reduced, config, nebula]);
 
   return (
     <canvas
