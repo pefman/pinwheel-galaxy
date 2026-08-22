@@ -1,0 +1,59 @@
+{
+  "agent": "Pinwheel Galaxy",
+  "version": "0.11.0",
+  "description": "An ever-evolving, interactive generative-art site. Tune a live gravity-well starfield, shape your own galaxy, and share the exact result as a single URL. No account or backend required.",
+  "url": "https://pinwheel-galaxy.vercel.app",
+  "homepage_url": "https://pinwheel-galaxy.vercel.app",
+  "robots_url": "https://pinwheel-galaxy.vercel.app/robots.txt",
+  "llms_txt_url": "https://pinwheel-galaxy.vercel.app/llms.txt",
+  "contact_email": null,
+  "capabilities": [
+    {
+      "name": "generate-galaxy",
+      "description": "Compose an interactive gravity-well starfield that reacts to cursor and controls.",
+      "url": "https://pinwheel-galaxy.vercel.app"
+    },
+    {
+      "name": "tune-galaxy",
+      "description": "Adjust spiral arms, rotation speed, star density, colour theme, gravity well, zoom, and layered effects (nebula, comet trail, shooting stars, stellar depth, constellation mode).",
+      "url": "https://pinwheel-galaxy.vercel.app"
+    },
+    {
+      "name": "share-galaxy",
+      "description": "Encode any galaxy state as a shareable URL; a shared link re-hydrates the exact galaxy on open.",
+      "url": "https://pinwheel-galaxy.vercel.app"
+    },
+    {
+      "name": "galaxy-of-the-day",
+      "description": "A fresh, seeded galaxy with a creative prompt, refreshed once per calendar day.",
+      "url": "https://pinwheel-galaxy.vercel.app"
+    }
+  ],
+  "recipe_format": {
+    "description": "A galaxy is fully described by URL query parameters; any combination re-hydrates a specific galaxy.",
+    "parameters": {
+      "theme": "colour theme / palette",
+      "arms": "spiral arm count",
+      "rpm": "rotation speed",
+      "stars": "star density",
+      "gravity": "gravity-well strength",
+      "z": "zoom",
+      "<layer>": "effect layer toggles, e.g. nebula=on, comet=on, shootingstars=on, stardepth=on, constellation=on",
+      "recipe": "optional compact bundled recipe string"
+    },
+    "example": "https://pinwheel-galaxy.vercel.app/?theme=fire&arms=3&rpm=2&stars=1&nebula=on&comet=on"
+  },
+  "auth": "none",
+  "rate_limit": "none",
+  "data_collection": "none",
+  "repository": {
+    "name": "pefman/pinwheel-galaxy",
+    "url": "https://github.com/pefman/pinwheel-galaxy",
+    "content_type": "source_code",
+    "license": "private"
+  },
+  "sources": [
+    "https://axd.md/",
+    "https://www.bridgetoagent.com/blog/agents-json-vs-webmcp"
+  ]
+}

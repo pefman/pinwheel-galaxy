@@ -1,0 +1,63 @@
+# Pinwheel Galaxy — Agent Readability (llms.txt)
+
+## What this site is
+
+**Pinwheel Galaxy** is an ever-evolving, interactive generative art site. You
+tune a live, physics-driven gravity-well starfield and shape your own galaxy —
+arms, rotation, star density, colour theme, dust/nebula layers, motion — then
+share the exact result as a single URL. There is no account, no backend, and no
+server-side storage: the URL is the entire galaxy.
+
+- **Live site:** https://pinwheel-galaxy.vercel.app
+- **Source:** https://github.com/pefman/pinwheel-galaxy
+- **Current version:** 0.11.0
+
+## What an agent can help a user do
+
+- **Generate a galaxy** — open the site; the starfield composes itself and reacts
+  to cursor and controls.
+- **Tune a galaxy** — adjust preset arms, rotation speed, star density, variable
+  stars, gravity well, zoom, and layered effects (nebula drift, comet trail,
+  shooting stars, stellar depth, constellation mode).
+- **Share a galaxy** — every current state is encoded in the URL query string, so
+  copying the address bar shares the exact galaxy. A galaxy can also be re-hydrated
+  from a shared link.
+- **Discover a daily galaxy** — a fresh, seeded "Galaxy of the Day" refreshes once
+  per calendar day with a creative prompt.
+
+## How the galaxy recipe works (for agents)
+
+A galaxy is fully described by URL query parameters, so an agent can construct,
+read, or re-create any galaxy without any API:
+
+- `?theme=` — colour theme / palette
+- `?arms=` — spiral arm count
+- `?rpm=` — rotation speed
+- `?stars=` — star density
+- `?gravity=` — gravity-well strength
+- `?z=` — zoom
+- `?<layer>=on` — enable effect layers (e.g. `nebula`, `comet`, `shootingstars`,
+  `stardepth`, `constellation`)
+- `?recipe=` — a compact, URL-encoded recipe string that bundles the above
+
+Any valid combination of these parameters re-hydrates a specific galaxy on open.
+
+## Key pages / routes
+
+- `/` — the interactive generator (single-page app; all sections live here).
+- `/llms.txt` — this file (agent readability).
+- `/agents.json` — machine-readable agent capabilities manifest.
+- `/robots.txt` — crawler policy, links to this file.
+- Source & bug reports live on GitHub: https://github.com/pefman/pinwheel-galaxy
+
+## Agent notes
+
+- The site is client-rendered (Next.js App Router). Content is present in the
+  initial HTML; there is no server API to call.
+- No authentication, no API keys, no rate limiting, no paid tiers.
+- No privacy policy, terms of service, or cookie banner — nothing is collected.
+
+## Sources & standards
+
+- `llms.txt` / agent-readability: https://axd.md/
+- agents.json vs WebMCP vs llms.txt: https://www.bridgetoagent.com/blog/agents-json-vs-webmcp

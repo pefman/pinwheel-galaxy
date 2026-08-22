@@ -1,0 +1,7 @@
+# robots.txt — Pinwheel Galaxy
+
+User-agent: *
+Allow: /
+
+# AI agents can read site context at /llms.txt
+# https://pinwheel-galaxy.vercel.app/llms.txt
