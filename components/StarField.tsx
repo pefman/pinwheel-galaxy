@@ -54,6 +54,14 @@ import {
   variableAlpha,
   variableSize,
 } from "@/lib/variableStars";
+import {
+  cursorSpeed,
+  lerp,
+  polylineLength,
+  resampleTail,
+  tailLengthFromSpeed,
+  type Point as CometPoint,
+} from "@/lib/comet";
 
 const SPRING_K = 0.02; // how strongly stars return to their orbit
 const DAMPING = 0.86; // velocity damping per frame
@@ -74,6 +82,15 @@ const CONSTELLATION_MAX_ALPHA = 0.32;
 // visible payoff — the faster the galaxy rotates, the deeper the warp.
 const WARP_RPM_THRESHOLD = 10; // rpm at which streaks first appear
 const WARP_RPM_RANGE = 20 - WARP_RPM_THRESHOLD; // 20 is the max rpm
+
+// Comet Trail: a glowing comet with a tapering tail trails the pointer. The
+// tail length grows with cursor speed and its hue is drawn from the theme.
+const COMET_HISTORY_MAX = 48; // max pointer samples kept
+const COMET_SAMPLE_MAX_AGE = 500; // ms a sample is retained before it ages out
+const COMET_TAIL_POINTS = 26; // tail points resampled from the pointer path
+const COMET_BASE_TAIL_LEN = 60; // px tail length at a slow drift
+const COMET_MAX_TAIL_LEN = 320; // px tail length at full speed
+const COMET_MAX_SPEED = 900; // px/s at which the tail reaches its max length
 
 interface Star {
   radius: number; // orbit radius from galaxy centre (px)
@@ -167,6 +184,7 @@ export default function StarField({
   zoomEnabled = false,
   depthMode = false,
   variableMode = false,
+  cometMode = false,
   onZoom,
 }: {
   active: boolean;
@@ -180,6 +198,9 @@ export default function StarField({
   /** Variable Stars: an opt-in living-sky layer — some stars brighten/dim on
    * their own light curves and a few rare giants glow larger. */
   variableMode?: boolean;
+  /** Comet Trail: an opt-in glowing comet that trails the pointer, its tail
+   * length growing with cursor speed and its hue drawn from the active theme. */
+  cometMode?: boolean;
   /** Called with the live zoom whenever it changes, so the parent can share it. */
   onZoom?: (zoom: number) => void;
 }) {
@@ -236,6 +257,10 @@ export default function StarField({
     let lastPinchDist = 0;
     let lastTap = 0;
     let lastZoomBroadcast: number | undefined;
+    // Comet Trail: a bounded ring buffer of recent pointer samples and the
+    // eased head position the comet's bright core follows.
+    const cometHistory: CometPoint[] = [];
+    const cometHead = { x: -9999, y: -9999 };
 
     const resize = () => {
       dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
@@ -643,6 +668,85 @@ export default function StarField({
         ctx.restore();
       }
 
+      // Comet Trail: a glowing comet with a tapering tail trails the pointer.
+      // Drawn *after* the zoom transform so it stays pinned to the on-screen
+      // cursor regardless of zoom. The tail length grows with cursor speed and
+      // its hue is drawn from the active theme — pure atmosphere, never stars.
+      if (cometMode) {
+        const nowMs = Date.now();
+        cometHistory.push({ x: mouse.x, y: mouse.y, t: nowMs });
+        // Prune stale samples and keep the buffer bounded.
+        let k = cometHistory.length;
+        while (k-- > 0 && nowMs - cometHistory[k].t > COMET_SAMPLE_MAX_AGE) {
+          cometHistory.splice(k, 1);
+        }
+        if (cometHistory.length >= 2 && cometHistory.length > COMET_HISTORY_MAX) {
+          cometHistory.splice(0, cometHistory.length - COMET_HISTORY_MAX);
+        }
+        // Ease the head toward the pointer so the comet glides rather than snaps.
+        cometHead.x += (mouse.x - cometHead.x) * 0.45;
+        cometHead.y += (mouse.y - cometHead.y) * 0.45;
+        if (cometHistory.length >= 2 && cometHead.x > -9000) {
+          const speed = cursorSpeed(cometHistory, 6);
+          const tail = resampleTail(cometHistory, COMET_TAIL_POINTS);
+          const pathLen = polylineLength(tail);
+          const desired = tailLengthFromSpeed(
+            speed,
+            COMET_BASE_TAIL_LEN,
+            COMET_MAX_TAIL_LEN,
+            20,
+            COMET_MAX_SPEED,
+          );
+          const scale = pathLen > 0 ? desired / pathLen : COMET_BASE_TAIL_LEN / 120;
+          const grow = Math.max(0.35, scale);
+          const head = cometHead;
+          const hueA = hues[0] ?? 200;
+          const hueB = hues[1] ?? hues[0] ?? 240;
+          // Soft outer halo that swells with the tail.
+          const haloGrad = ctx.createRadialGradient(
+            head.x,
+            head.y,
+            0,
+            head.x,
+            head.y,
+            64 * grow,
+          );
+          haloGrad.addColorStop(0, `hsla(${hueA}, 90%, 82%, 0.4)`);
+          haloGrad.addColorStop(1, `hsla(${hueA}, 90%, 70%, 0)`);
+          ctx.fillStyle = haloGrad;
+          ctx.beginPath();
+          ctx.arc(head.x, head.y, 64 * grow, 0, Math.PI * 2);
+          ctx.fill();
+          // Tapered tail: thin and faint at the tip, thick and bright at the head.
+          ctx.lineCap = "round";
+          for (let i = 0; i < tail.length - 1; i++) {
+            const p0 = tail[i];
+            const p1 = tail[i + 1];
+            const t = i / (tail.length - 1);
+            const w = Math.max(0.5, lerp(1.5, 30, t));
+            const hue = lerp(hueB, hueA, t);
+            const alpha = lerp(0.02, 0.92, t * t);
+            const grad = ctx.createLinearGradient(p0.x, p0.y, p1.x, p1.y);
+            grad.addColorStop(0, `hsla(${hue}, 90%, 65%, 0)`);
+            grad.addColorStop(1, `hsla(${hue}, 95%, ${76 + t * 18}%, ${alpha})`);
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = w * grow;
+            ctx.beginPath();
+            ctx.moveTo(p0.x, p0.y);
+            ctx.lineTo(p1.x, p1.y);
+            ctx.stroke();
+          }
+          // Bright hot core.
+          const coreGrad = ctx.createRadialGradient(head.x, head.y, 0, head.x, head.y, 11);
+          coreGrad.addColorStop(0, `hsla(${hueA}, 100%, 97%, 0.95)`);
+          coreGrad.addColorStop(1, `hsla(${hueA}, 90%, 80%, 0)`);
+          ctx.fillStyle = coreGrad;
+          ctx.beginPath();
+          ctx.arc(head.x, head.y, 11, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
       raf = requestAnimationFrame(frame);
     };
 
@@ -679,6 +783,7 @@ export default function StarField({
     zoomEnabled,
     depthMode,
     variableMode,
+    cometMode,
     onZoom,
   ]);
 

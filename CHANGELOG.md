@@ -4,6 +4,36 @@ All notable changes to **Pinwheel Galaxy** are documented here. This project
 follows [Keep a Changelog](https://keepachangelog.com) conventions, plus a
 "Shipped" section for ongoing autonomous evolution.
 
+## [0.9.0] — 2026-08-22
+
+### Added
+
+- **Comet Trail** — an opt-in cursor-following comet. When enabled, a bright
+  comet with a tapering, fading tail trails the pointer across the hero: its
+  tail length grows with cursor speed (a slow drift is a short comet, a swipe a
+  long streak) and its hue is drawn from the galaxy's active theme, so it always
+  stays in sync with the colour. Implemented additively as a new draw pass in
+  `components/StarField.tsx`, painted *after* the galaxy-zoom transform so it
+  stays pinned to the on-screen cursor regardless of zoom — it never touches the
+  gravity-well spring physics, warp streaks, nebula, constellations, meteors,
+  depth or variable stars, so it is fully orthogonal and **off by default**.
+  - `lib/comet.ts` (new) — the **pure** logic: a deterministic `mulberry32`
+    PRNG, `cursorSpeed` (px/s from recent pointer samples), `polylineLength` /
+    `resampleTail` (evenly resampling the pointer path into tail points) and
+    `tailLengthFromSpeed` (mapping speed onto a capped tail length).
+    `lib/comet.test.ts` (new, 16 tests) covers determinism, range, px/s,
+    polyline length, even resampling, and tail-length mapping/capping.
+  - `components/StarField.tsx` gained a `cometMode` prop, a bounded pointer
+    sample ring buffer with a 500 ms age prune, an eased comet head, and the
+    tapered-tail + halo + core draw pass.
+  - `app/page.tsx` gained a **Comet: On/Off** chip in the dock.
+
+### Notes
+
+- Additive and non-breaking; the default galaxy (toggle off) is visually
+  unchanged. Built, locally verified (`npm run build` + `npm test` 61/61), and
+  deployed to Vercel production.
+
 ## [0.8.0] — 2026-08-22
 
 ### Added

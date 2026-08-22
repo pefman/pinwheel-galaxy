@@ -39,6 +39,7 @@ export default function Home() {
   const [zoomEnabled, setZoomEnabled] = useState(false);
   const [depth, setDepth] = useState(false);
   const [variable, setVariable] = useState(false);
+  const [comet, setComet] = useState(false);
 
   return (
     <main className="relative min-h-screen overflow-hidden">
@@ -134,6 +135,7 @@ export default function Home() {
             { label: "Zoom", active: zoomEnabled, onToggle: () => setZoomEnabled((z) => !z), color: "rgba(34,211,238,0.7)" },
             { label: "Depth", active: depth, onToggle: () => setDepth((d) => !d), color: "rgba(132,204,227,0.7)" },
             { label: "Variable Stars", active: variable, onToggle: () => setVariable((v) => !v), color: "rgba(250,204,21,0.75)" },
+            { label: "Comet", active: comet, onToggle: () => setComet((c) => !c), color: "rgba(134,239,233,0.85)" },
           ]}
         />
       </section>

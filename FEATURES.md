@@ -5,6 +5,64 @@ additive and dated. New features are added here every evolution cycle.
 
 ---
 
+## Comet Trail — a Cursor-Following Comet
+
+- **Date added:** 2026-08-22
+- **Version:** 0.9.0
+- **Status:** Shipped & live on Vercel — https://pinwheel-galaxy.vercel.app
+
+### What + why
+
+A comet trails your cursor across the hero: a bright core with a tapering,
+fading tail that grows longer the faster you sweep the pointer and re-colours to
+match the active galaxy theme. It is a small, delightful, pointer-reactive
+touch that marks a site that was designed, not generated. Purely additive and
+**off by default**, so the default galaxy looks exactly as before. It is
+distinct from Shooting Stars — those are sky meteors on a fixed timeline; the
+Comet Trail lives and dies with your pointer.
+
+### How it works (high-level)
+
+- `lib/comet.ts` (new) holds the **pure** logic: a `mulberry32` PRNG,
+  `cursorSpeed` (px/s from recent pointer samples), `polylineLength` /
+  `resampleTail` (evenly resampling the pointer path into tail points), and
+  `tailLengthFromSpeed` (mapping speed onto a capped tail length). All unit-tested.
+- `components/StarField.tsx` owns the live layer: a bounded ring buffer of
+  pointer samples, a 500 ms age prune, an eased comet head, and a draw pass that
+  paints a soft halo, a tapered gradient tail and a bright core — all drawn
+  *after* the galaxy-zoom transform so the comet stays pinned to the on-screen
+  cursor. Pure atmosphere; it never touches the gravity-well physics or any
+  other layer.
+- `app/page.tsx` gained a **Comet: On/Off** chip in the dock.
+
+### Key files / components
+
+- `lib/comet.ts` (new) and `lib/comet.test.ts` (new, 16 tests).
+- `components/StarField.tsx` — new `cometMode` prop + tapered-tail draw pass.
+- `app/page.tsx` — the **Comet** toggle chip.
+
+### User-facing behavior
+
+- Toggle **Comet: On** and move the cursor — a glowing comet follows the
+  pointer, its tail stretching on a fast swipe and shrinking when you go still.
+- Switch theme — the comet re-colours to match.
+- Works alongside every other toggle and the galaxy presets.
+
+### How to test / try it
+
+1. `npm install` → `npm run build` → `npm start`; toggle **Comet: On** and move
+   the cursor over the hero.
+2. Move slowly then swipe fast — the tail grows with speed.
+3. Switch theme — the comet re-colours.
+4. `npm test` — 16 new tests cover the PRNG, speed, polyline length,
+   resampling, and tail-length mapping.
+
+### Known limitations / follow-ups
+
+- Toggle state is not persisted across reloads (a follow-up could add a
+  `?comet=` param like `?z=`). The tail is tapered single-pass segments, not a
+  bloom halo (a possible follow-up: a second blurred pass for a softer glow).
+
 ## Variable Stars — a Living-Sky Layer
 
 - **Date added:** 2026-08-22
