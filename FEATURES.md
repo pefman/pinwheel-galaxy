@@ -5,6 +5,76 @@ additive and dated. New features are added here every evolution cycle.
 
 ---
 
+## Aurora — a Northern-Lights Sky Layer
+
+- **Date added:** 2026-08-22
+- **Version:** 0.14.0
+- **Status:** Shipped & live on Vercel — https://pinwheel-galaxy.vercel.app
+
+### What + why
+
+A real night sky holds more than stars: a faint, drifting atmospheric glow near
+the horizon. Aurora borrows the look of the earth's northern lights and paints a
+handful of soft, wavy ribbons across the upper sky of the galaxy. It gives the
+sky a second, slower layer of motion — live “weather” that drifts and sways —
+complementing the fast, cursor-driven starfield. It is purely cosmetic, additive
+and **off by default**, so the default galaxy looks exactly as before.
+
+### How it works (high-level)
+
+- `lib/aurora.ts` (new) holds the **pure** logic: a deterministic `mulberry32`
+  PRNG, `computeAuroraBands({ height, hues })` which returns a stable set of
+  ribbon geometry `{ baseY, amplitude, wavelength, phase, hue, saturation,
+  lightness, alpha }` (hues drawn from the active theme), `auroraEdgeY` (the wavy
+  top edge — two layered sines plus a gravity-well sway), and `auroraEdgePoints`
+  (rasterises an edge into draw points). Because the geometry is a pure function
+  of a fixed seed, the same galaxy always shows the same aurora across frames
+  and reloads.
+- `components/StarField.tsx` gained an opt-in `auroraMode` prop. It builds the
+  band geometry once in `resize()` (so it tracks the current sky size but never
+  re-randomises mid-flight), then each frame advances an aurora clock, eases a
+  horizontal sway toward the cursor's offset from the centre, and draws each
+  ribbon as a filled path with a vertical gradient — **behind** the stars (like
+  nebula and meteors). It touches the draw pass only, so it is fully orthogonal
+  to gravity, warp, nebula, constellations, meteors, variable stars, Stellar
+  Depth, zoom and the comet.
+- `lib/recipe.ts` gained a shareable `?aurora=` layer toggle (off by default, so
+  a calm galaxy keeps a tidy URL) and it is surfaced in `describeRecipe`.
+- `app/page.tsx` wires `auroraMode={recipe.aurora}` and adds an **Aurora** chip
+  to the Galaxy Dock's environment row.
+
+### Key files / components
+
+- `lib/aurora.ts` (new) and `lib/aurora.test.ts` (new, 10 tests).
+- `components/StarField.tsx` — new `auroraMode` prop, band build in `resize()`,
+  and the behind-the-stars ribbon draw.
+- `lib/recipe.ts` — the shareable `?aurora=` layer toggle.
+- `app/page.tsx` — the **Aurora** toggle chip.
+
+### User-facing behavior
+
+- Toggle **Aurora: On** and watch — a handful of soft green/cyan ribbons appear
+  drifting across the upper sky, gently swaying with the gravity well. The
+  stars, gravity well, spin, and every other toggle keep working exactly as
+  before.
+
+### How to test / try it
+
+1. `npm install` → `npm run build` → `npm start`; toggle **Aurora: On** and
+   watch the ribbons drift. Add `?aurora=on` to the URL to share.
+2. Combine with Nebula or Constellations — the ribbons sit behind both cleanly.
+3. `npm test` — 10 new tests cover determinism, band count, range invariants,
+   theme-hue selection, seed sensitivity, edge math, time drift, sway, and
+   rasterisation.
+
+### Known limitations / follow-ups
+
+- The ribbon palette is drawn from the active theme hues; future cycles could
+  add a dedicated aurora hue (e.g. a faint red aurora band) and per-ribbon
+  intensity controls.
+- Aurora state is shareable via `?aurora=` but not persisted in the dock beyond
+  the recipe; a follow-up could add a saved “Aurora” preset.
+
 ## Shareable Galaxy Prints — export your galaxy as a branded image
 
 - **Date added:** 2026-08-22

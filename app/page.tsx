@@ -123,6 +123,7 @@ export default function Home() {
           zoomEnabled={recipe.zoomMode}
           depthMode={recipe.depth}
           variableMode={recipe.variable}
+          auroraMode={recipe.aurora}
           onZoom={setZoom}
           canvasRef={(el) => {
             canvasRef.current = el;
@@ -181,6 +182,12 @@ export default function Home() {
               active: sound,
               onToggle: toggleSound,
               color: "rgba(167,139,250,0.85)",
+            },
+            {
+              label: "Aurora",
+              active: recipe.aurora,
+              onToggle: () => toggle("aurora"),
+              color: "rgba(52,211,153,0.7)",
             },
           ]}
         />
