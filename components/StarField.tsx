@@ -315,7 +315,18 @@ export default function StarField({
         }
       }
       for (const p of pulses) {
-        const grad = ctx.createRadialGradient(p.x, p.y, p.radius - PULSE_WIDTH, p.x, p.y, p.radius + PULSE_WIDTH);
+        // The ring only reaches radius == PULSE_WIDTH once fully grown, so while
+        // it is young the inner radius (p.radius - PULSE_WIDTH) is negative and
+        // createRadialGradient throws — which used to kill the rAF loop and freeze
+        // the whole galaxy. Clamp it to >= 0 so a click never blanks the screen.
+        const grad = ctx.createRadialGradient(
+          p.x,
+          p.y,
+          Math.max(0, p.radius - PULSE_WIDTH),
+          p.x,
+          p.y,
+          p.radius + PULSE_WIDTH,
+        );
         grad.addColorStop(0, `hsla(190, 90%, 70%, 0)`);
         grad.addColorStop(0.5, `hsla(190, 90%, 75%, ${0.5 * p.life})`);
         grad.addColorStop(1, `hsla(190, 90%, 70%, 0)`);
