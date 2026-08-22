@@ -45,6 +45,14 @@ const CONSTELLATION_MAX_ALPHA = 0.32;
 const WARP_RPM_THRESHOLD = 10; // rpm at which streaks first appear
 const WARP_RPM_RANGE = 20 - WARP_RPM_THRESHOLD; // 20 is the max rpm
 
+// Comet Voyager: a lone comet arcs across the galaxy on a timer, its path
+// bending in the gravity well. Additive and emergent — there is no toggle; a
+// visitor simply watches one drift by every so often. Its tail is a tapering
+// ribbon of light drawn over the stars.
+const COMET_TRAIL_LEN = 28; // trail points kept per comet
+const COMET_MIN_GAP = 9; // seconds between comets (min)
+const COMET_MAX_GAP = 20; // seconds between comets (max)
+
 interface Star {
   radius: number; // orbit radius from galaxy centre (px)
   angle: number; // base angle on its spiral arm
@@ -64,6 +72,21 @@ interface Pulse {
   y: number;
   radius: number;
   life: number; // 1 -> 0 as it expands
+}
+
+interface TrailPoint {
+  x: number;
+  y: number;
+}
+
+interface Comet {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  trail: TrailPoint[]; // recent positions, oldest first
+  size: number; // head radius (px)
+  hue: number; // colour, drawn from the active theme
 }
 
 function createStars(
@@ -152,7 +175,11 @@ export default function StarField({
     let w = 0;
     let h = 0;
     const { arms, rpm, stars: STAR_COUNT, theme } = config;
-    const hues = (THEMES[theme]?.hues ?? THEMES[DEFAULT_CONFIG.theme].hues) as number[];
+    let hues = (THEMES[theme]?.hues ?? THEMES[DEFAULT_CONFIG.theme].hues) as number[];
+    // Timed comet launches: a comet appears every cometGap seconds.
+    let cometTimer = 0;
+    let cometGap = 4 + Math.random() * 6; // first one shows up soon after load
+    let comets: Comet[] = [];
 
     let stars: Star[] = [];
     let raf = 0;
@@ -169,6 +196,42 @@ export default function StarField({
     let nebulaTime = 0;
     const nebulaParallax = { x: 0, y: 0 };
 
+    // Launch a comet from a random viewport edge, aimed roughly across the sky.
+    const launchComet = () => {
+      const edge = Math.floor(Math.random() * 4);
+      const margin = 60;
+      let x = 0;
+      let y = 0;
+      let ang = 0;
+      if (edge === 0) { // left -> right
+        x = -margin;
+        y = Math.random() * h;
+        ang = Math.random() * (Math.PI * 0.6) - Math.PI * 0.3;
+      } else if (edge === 1) { // right -> left
+        x = w + margin;
+        y = Math.random() * h;
+        ang = Math.PI + Math.random() * (Math.PI * 0.6) - Math.PI * 0.3;
+      } else if (edge === 2) { // top -> bottom
+        x = Math.random() * w;
+        y = -margin;
+        ang = Math.PI * 0.5 + Math.random() * (Math.PI * 0.6) - Math.PI * 0.3;
+      } else { // bottom -> top
+        x = Math.random() * w;
+        y = h + margin;
+        ang = -Math.PI * 0.5 + Math.random() * (Math.PI * 0.6) - Math.PI * 0.3;
+      }
+      const speed = 150 + Math.random() * 150;
+      comets.push({
+        x,
+        y,
+        vx: Math.cos(ang) * speed,
+        vy: Math.sin(ang) * speed,
+        trail: [],
+        size: 2 + Math.random() * 2,
+        hue: hues[Math.floor(Math.random() * hues.length)],
+      });
+    };
+
     const resize = () => {
       dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
       w = canvas.clientWidth;
@@ -176,6 +239,7 @@ export default function StarField({
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      hues = (THEMES[theme]?.hues ?? THEMES[DEFAULT_CONFIG.theme].hues) as number[];
       stars = createStars(w, h, arms, STAR_COUNT, hues);
     };
 
@@ -204,10 +268,22 @@ export default function StarField({
       mouse.x = -9999;
       mouse.y = -9999;
     };
+    // Press "C" to launch a comet on demand (handy for a quick look / demo).
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "c" || e.key === "C") launchComet();
+    };
 
     const frame = (now: number) => {
       const dt = last ? Math.min((now - last) / 1000, 0.05) : 1 / 60;
       last = now;
+
+      // Timed comet launches — a new voyager appears every cometGap seconds.
+      cometTimer += dt;
+      if (cometTimer >= cometGap) {
+        cometTimer = 0;
+        cometGap = COMET_MIN_GAP + Math.random() * (COMET_MAX_GAP - COMET_MIN_GAP);
+        launchComet();
+      }
 
       // Spin the galaxy.
       galaxyAngle += (rpm * Math.PI * 2) / 60 * dt;
@@ -263,6 +339,31 @@ export default function StarField({
             s.vx += (dx / dist) * kick * dt;
             s.vy += (dy / dist) * kick * dt;
           }
+        }
+      }
+
+      // Comets: update physics/trail and expire ones that have left the sky.
+      // A comet's path bends in the gravity well — the same well that moves the
+      // stars — so one drifting near the cursor gets a slingshot.
+      for (let i = comets.length - 1; i >= 0; i--) {
+        const c = comets[i];
+        if (active && !reduced && mouse.active) {
+          const dx = mouse.x - c.x;
+          const dy = mouse.y - c.y;
+          const dist2 = dx * dx + dy * dy;
+          if (dist2 < ATTRACT_RADIUS * ATTRACT_RADIUS) {
+            const dist = Math.sqrt(dist2) || 1;
+            const f = ((ATTRACT_RADIUS - dist) / ATTRACT_RADIUS) * ATTRACT_STRENGTH;
+            c.vx += (dx / dist) * f * dt * 60;
+            c.vy += (dy / dist) * f * dt * 60;
+          }
+        }
+        c.x += c.vx * dt;
+        c.y += c.vy * dt;
+        c.trail.push({ x: c.x, y: c.y });
+        if (c.trail.length > COMET_TRAIL_LEN) c.trail.shift();
+        if (c.x < -80 || c.x > w + 80 || c.y < -80 || c.y > h + 80) {
+          comets.splice(i, 1);
         }
       }
 
@@ -405,6 +506,31 @@ export default function StarField({
         ctx.fill();
       }
 
+      // Comets: glowing head + tapering tail, painted over the stars.
+      for (const c of comets) {
+        for (let i = 0; i < c.trail.length - 1; i++) {
+          const p0 = c.trail[i];
+          const p1 = c.trail[i + 1];
+          const t = i / c.trail.length; // 0 (tail) -> 1 (head)
+          ctx.strokeStyle = `hsla(${c.hue}, 90%, 75%, ${t * 0.65})`;
+          ctx.lineWidth = Math.max(0.5, t * c.size * 2.4);
+          ctx.lineCap = "round";
+          ctx.beginPath();
+          ctx.moveTo(p0.x, p0.y);
+          ctx.lineTo(p1.x, p1.y);
+          ctx.stroke();
+        }
+        const glowR = c.size * 5;
+        const headGrad = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, glowR);
+        headGrad.addColorStop(0, `hsla(${c.hue}, 95%, 95%, 0.95)`);
+        headGrad.addColorStop(0.4, `hsla(${c.hue}, 95%, 80%, 0.6)`);
+        headGrad.addColorStop(1, `hsla(${c.hue}, 95%, 70%, 0)`);
+        ctx.fillStyle = headGrad;
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, glowR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
       raf = requestAnimationFrame(frame);
     };
 
@@ -414,6 +540,7 @@ export default function StarField({
     window.addEventListener("click", onClick);
     window.addEventListener("touchmove", onTouch, { passive: true });
     window.addEventListener("touchend", touchEnd);
+    window.addEventListener("keydown", onKey, { passive: true });
     window.addEventListener("resize", resize);
     raf = requestAnimationFrame(frame);
 
@@ -424,6 +551,7 @@ export default function StarField({
       window.removeEventListener("click", onClick);
       window.removeEventListener("touchmove", onTouch);
       window.removeEventListener("touchend", touchEnd);
+      window.removeEventListener("keydown", onKey);
       window.removeEventListener("resize", resize);
     };
   }, [active, reduced, config, nebula]);

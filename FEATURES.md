@@ -16,11 +16,9 @@ additive and dated. New features are added here every evolution cycle.
 Behind every galaxy there is only black space. Nebula Drift fills that space
 with a soft, slow-drifting **nebula** — a living depth backdrop that sits
 *behind* the stars and gives the hero a real sense of three-dimensional space
-instead of a flat field of points on black. It is a direct response to the 2026
-anti-homogenization trend: distinctive, layered depth marks a site that was
-designed, not generated. Purely additive and non-breaking — it paints a new draw
-pass behind every existing layer and is **off by default**, so the default
-galaxy looks unchanged.
+instead of a flat field of points on black. Purely additive and non-breaking —
+it paints a new draw pass behind every existing layer and is **off by default**,
+so the default galaxy looks unchanged.
 
 ### How it works (high-level)
 
@@ -62,6 +60,84 @@ galaxy looks unchanged.
 
 Direct link with Aurora: `?theme=aurora&arms=5&rpm=9&stars=400` (then toggle
 Nebula On). See `docs/features/nebula-drift.md` for the full doc.
+
+### Known limitations / follow-ups
+
+- Toggle state is not persisted across reloads (same as Constellation Mode).
+- The clouds orbit on a fixed radius; a noise-driven drift would feel more
+  organic.
+- A "depth" slider could let visitors dial the parallax strength.
+
+## Comet Voyager — A Lone Comet Arcing Across the Galaxy
+
+- **Date added:** 2026-08-22
+- **Version:** 0.5.0
+- **Status:** Shipped & live on Vercel — https://pinwheel-galaxy.vercel.app
+
+### What + why
+
+A lone comet periodically arcs across the galaxy, leaving a tapering ribbon of
+light with a glowing head. It exists to give the starfield something to *happen*
+even when a visitor is just watching — a recurring, unscripted moment of motion
+that makes the galaxy feel like a living sky rather than a static spiral.
+
+It is purely additive and emergent: there is no toggle and no UI control. A new
+comet launches from a random edge of the screen on a timer (roughly every 9–20 s,
+the first one appearing a few seconds after load), so the default look is
+completely unchanged — you just occasionally watch one drift by.
+
+### How it works (high-level)
+
+- Implemented as an additive draw pass in `components/StarField.tsx`, painted
+  **over** the stars so the comet reads as a foreground visitor.
+- A `cometTimer` accumulates frame time; once it passes a random `cometGap`
+  (9–20 s) a comet is launched from a random viewport edge, aimed roughly across
+  the sky at a random speed.
+- Each frame the comet advances and pushes its position onto a short trail array
+  (capped at 28 points). The tail is drawn as a series of segments that fade and
+  thin toward the tail end; a radial-gradient glow is painted for the head.
+- The comet's path **bends in the gravity well** using the same attraction
+  formula as the stars, so a comet drifting near the cursor gets a
+  gravitational slingshot. Under `prefers-reduced-motion` the well is inactive,
+  so the comet still travels (in a straight line) but does not bend.
+- Each comet's hue is chosen from the active theme's palette, so it matches the
+  current galaxy.
+
+### Key files / components
+
+- `components/StarField.tsx` — the `Comet`/`TrailPoint` types, the comet launch
+  timer, per-comet physics/trail update, the comet draw pass, and the `C`
+  key-to-launch shortcut.
+
+### User-facing behavior
+
+- Every so often a comet streaks across the hero from a random direction.
+- Its head glows and its tail fades to nothing; its colour matches the active
+  theme.
+- Move the cursor near its path: the comet curves around the gravity well.
+- Press **C** to launch one immediately.
+- Works with every theme, preset, and the other features (Constellation Mode,
+  Warp Drive) — comets float above all of them.
+
+### How to test / try it
+
+1. `npm install` then `npm run build` and `npm start`.
+2. Open the site and look at the hero. Within a few seconds a comet may already
+   appear; otherwise it shows up every ~9–20 s.
+3. Press **C** to force one and watch the glowing head and tapering tail.
+4. Move the cursor into the comet's path and watch it bend around the well.
+5. Switch theme (e.g. to **Ember**) — the next comet is warm-toned to match.
+
+### Known limitations / follow-ups
+
+- One comet at a time; a future follow-up could allow a short burst or a
+  per-comet size spread.
+- Launch timing is fully random — a softer, more rhythmic cadence could feel
+  more deliberate.
+- The `C` shortcut is the only way to launch on demand; a small on-screen
+  affordance is a possible follow-up if desired.
+
+---
 
 ## Galaxy Presets — Shareable, Deep-Linkable Galaxy Configs
 

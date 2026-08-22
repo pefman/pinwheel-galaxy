@@ -23,6 +23,37 @@ follows [Keep a Changelog](https://keepachangelog.com) conventions, plus a
   backdrop is off by default). Orthogonal to Gravity Well, Constellation, and
   Warp Drive.
 
+## [0.5.0] — 2026-08-22
+
+### Added
+
+- **Comet Voyager** — a lone comet periodically arcs across the galaxy. It
+  launches from a random edge of the screen on a timer (roughly every 9–20 s,
+  the first one appearing a few seconds after load), leaving a tapering ribbon
+  of light. Its head glows and its tail fades to nothing toward the tail end.
+  - The comet is **painted over** the starfield, so it reads as a foreground
+    visitor crossing your galaxy rather than part of the spiral.
+  - Its path **bends in the gravity well** — the same well that moves the stars —
+    so a comet that drifts near the cursor gets a gravitational slingshot and
+    curves. This ties the new layer to the existing interactivity instead of
+    floating independently.
+  - It is purely additive and emergent: there is **no toggle**. Like Warp
+    Drive, it is a function of time rather than a setting, so it never breaks
+    or clutters the default look — you just occasionally watch one drift by.
+  - It matches the active theme: each comet's hue is drawn from the current
+    palette, so a comet over the Ember galaxy is warm and over Azure is cool.
+  - A small convenience: press **C** to launch a comet on demand (handy for a
+    quick look or a demo).
+  - Implemented as an additive draw pass in `components/StarField.tsx`; comets
+    are a small `Comet[]` updated each frame with their own short trail array
+    (trivial cost).
+
+### Notes
+
+- Additive and non-breaking; the default galaxy is visually unchanged. Comets
+  still travel (in a straight line) even under `prefers-reduced-motion`, only
+  their well-bending is disabled.
+
 ## [0.3.0] — 2026-08-22
 
 ### Added
