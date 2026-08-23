@@ -74,6 +74,12 @@ import {
   terminatorXRadius,
   type MoonState,
 } from "@/lib/moon";
+import {
+  computeRingedGiant,
+  projectRingParticle,
+  particleAngleAt,
+  type RingedGiantState,
+} from "@/lib/ringedGiant";
 import { computeSupernova } from "@/lib/supernova";
 import {
   ROTATION_SECONDS_PER_TURN,
@@ -192,6 +198,29 @@ function hueFor(i: number, n: number, hues: number[]): number {
   return Math.round(hues[lo] + (hues[hi] - hues[lo]) * t);
 }
 
+/**
+ * Extract the HSL hue (0..360) from a `#rrggbb` hex colour, so the ring's glow
+ * and particles can be drawn with the same hue as the giant's palette.
+ */
+function hexToHue(hex: string): number {
+  let h = hex.replace("#", "");
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  const r = parseInt(h.slice(0, 2), 16) / 255;
+  const g = parseInt(h.slice(2, 4), 16) / 255;
+  const b = parseInt(h.slice(4, 6), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const delta = max - min;
+  if (delta === 0) return Math.round(r * 360);
+  let hue = 0;
+  if (max === r) hue = ((g - b) / delta) % 6;
+  else if (max === g) hue = (b - r) / delta + 2;
+  else hue = (r - g) / delta + 4;
+  hue *= 60;
+  if (hue < 0) hue += 360;
+  return Math.round(hue);
+}
+
 function useReducedMotion(): boolean {
   const [reduced, setReduced] = useState(false);
   useEffect(() => {
@@ -219,6 +248,7 @@ export default function StarField({
   supernovaMode = false,
   distantMode = false,
   blackHoleMode = false,
+  ringedGiantMode = false,
   onZoom,
   canvasRef,
 }: {
@@ -260,6 +290,12 @@ export default function StarField({
    * Pure atmosphere — never touches the stars or the spring physics.
    */
   blackHoleMode?: boolean;
+  /**
+   * Ringed Giant: an opt-in ringed gas giant that drifts slowly across the sky
+   * on its own clock, its rings spinning (inner particles racing outer ones).
+   * Pure atmosphere — never touches the stars or the spring physics.
+   */
+  ringedGiantMode?: boolean;
   /** Called with the live zoom whenever it changes, so the parent can share it. */
   onZoom?: (zoom: number) => void;
   /** Forwarded to the canvas element, so the parent can capture it (e.g. for a
@@ -352,6 +388,11 @@ export default function StarField({
     let blackHole: BlackHoleState = {} as BlackHoleState;
     let blackHoleDragging = false;
     let blackHoleDragOffset = { x: 0, y: 0 };
+    // Ringed Giant: a running clock for the giant's slow sky-crossing drift. Its
+    // whole state (position, bands, ring field) is recomputed each frame from
+    // this clock (cheap arithmetic) so it drifts smoothly, exactly like the
+    // moon. Pure atmosphere — never touches the stars or the spring physics.
+    let ringedGiantTime = 0;
 
     const resize = () => {
       dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
@@ -538,6 +579,14 @@ export default function StarField({
       // static; only the disk rotation advances, so the accretion disk swirls.
       if (blackHoleMode) {
         blackHole.spinPhase += dt * DISK_RPS;
+      }
+
+      // Ringed Giant: advance the sky-crossing drift clock (ms), matching the
+      // moon's. The whole state is recomputed each frame from this clock so the
+      // giant drifts smoothly; the ring particles' live angles are derived from
+      // this same clock at draw time.
+      if (ringedGiantMode) {
+        ringedGiantTime += dt * 1000;
       }
 
       const cx = w / 2;
@@ -961,6 +1010,95 @@ export default function StarField({
         ctx.restore();
       }
 
+      // Ringed Giant: a single ringed gas giant drifting slowly across the sky.
+      // Painted behind the stars (like the moon, supernova and distant galaxy)
+      // so the interactive galaxy stays foreground. The ring is drawn in two
+      // passes — the half of the orbiting particles that sit on the far side of
+      // the ring plane (behind the planet) first, then the opaque planet disk,
+      // then the near-side particles — so the planet correctly occludes its own
+      // back rings while the front rings pass in front. Pure atmosphere.
+      if (ringedGiantMode) {
+        const g = computeRingedGiant({ time: ringedGiantTime, width: w, height: h });
+        const gx = g.x;
+        const gy = g.y;
+        const R = g.radius;
+        const ring = g.ring;
+        const tilt = ring.tilt;
+        // Soft outer glow — the giant's atmosphere scatters light.
+        const glow = ctx.createRadialGradient(gx, gy, R * 0.95, gx, gy, R * 3.2);
+        glow.addColorStop(0, `hsla(${hexToHue(ring.color)}, 70%, 70%, 0.22)`);
+        glow.addColorStop(0.5, `hsla(${hexToHue(ring.color)}, 60%, 65%, 0.10)`);
+        glow.addColorStop(1, `hsla(${hexToHue(ring.color)}, 60%, 65%, 0)`);
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(gx, gy, R * 3.2, 0, Math.PI * 2);
+        ctx.fill();
+        // Back half of the ring: particles whose in-plane y is negative (behind
+        // the planet), drawn before the opaque disk so the planet hides them.
+        ctx.save();
+        for (const p of ring.particles) {
+          const angle = particleAngleAt(p, ringedGiantTime);
+          const proj = projectRingParticle(R, p.r, angle, tilt);
+          if (!proj.behind) continue;
+          const px = gx + proj.dx;
+          const py = gy + proj.dy;
+          // Keep only the particles whose projected position is outside the
+          // planet disk (the rest are hidden by it).
+          const dx = proj.dx;
+          const dy = proj.dy;
+          if (dx * dx + dy * dy < R * R) continue;
+          ctx.fillStyle = `hsla(${hexToHue(ring.color)}, 65%, 68%, ${ring.alpha * 0.85 * p.bright})`;
+          ctx.beginPath();
+          ctx.arc(px, py, Math.max(0.5, R * 0.012), 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+        // The gas-giant disk: bands wrapped across the sphere, clipped to the
+        // disk, then a spherical-shading overlay (limb darkening) plus a sun-lit
+        // highlight so it reads as a globe, not a flat disc.
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(gx, gy, R, 0, Math.PI * 2);
+        ctx.clip();
+        for (const band of g.bands) {
+          const by = gy + band.y * R;
+          const bh = Math.max(0.5, band.halfWidth * R);
+          const bandGrad = ctx.createLinearGradient(0, by - bh, 0, by + bh);
+          bandGrad.addColorStop(0, `${band.color}00`);
+          bandGrad.addColorStop(0.5, band.color + Math.round(band.alpha * 255).toString(16).padStart(2, "0"));
+          bandGrad.addColorStop(1, `${band.color}00`);
+          ctx.fillStyle = bandGrad;
+          ctx.fillRect(gx - R, by - bh, R * 2, bh * 2);
+        }
+        // Spherical shading: darker at the limb, lit toward the sun side.
+        const sunX = gx + Math.cos(g.sunAngle) * R;
+        const sunY = gy + Math.sin(g.sunAngle) * R;
+        const shade = ctx.createRadialGradient(sunX, sunY, R * 0.1, gx, gy, R);
+        shade.addColorStop(0, "rgba(255,255,255,0.35)");
+        shade.addColorStop(0.45, "rgba(0,0,0,0)");
+        shade.addColorStop(0.85, "rgba(0,0,0,0.45)");
+        shade.addColorStop(1, "rgba(0,0,0,0.7)");
+        ctx.fillStyle = shade;
+        ctx.fillRect(gx - R, gy - R, R * 2, R * 2);
+        ctx.restore();
+        // Front half of the ring: particles in front of the planet, drawn on
+        // top so they pass across the disk.
+        ctx.save();
+        for (const p of ring.particles) {
+          const angle = particleAngleAt(p, ringedGiantTime);
+          const proj = projectRingParticle(R, p.r, angle, tilt);
+          if (proj.behind) continue;
+          const px = gx + proj.dx;
+          const py = gy + proj.dy;
+          if (proj.dx * proj.dx + proj.dy * proj.dy < R * R) continue;
+          ctx.fillStyle = `hsla(${hexToHue(ring.color)}, 65%, 72%, ${ring.alpha * p.bright})`;
+          ctx.beginPath();
+          ctx.arc(px, py, Math.max(0.5, R * 0.012), 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
       for (const p of pulses) {
         // The ring only reaches radius == PULSE_WIDTH once fully grown, so while
         // it is young the inner radius (p.radius - PULSE_WIDTH) is negative and
@@ -1325,6 +1463,7 @@ export default function StarField({
     supernovaMode,
     distantMode,
     blackHoleMode,
+    ringedGiantMode,
     onZoom,
   ]);
 

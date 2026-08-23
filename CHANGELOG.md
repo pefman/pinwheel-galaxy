@@ -4,6 +4,27 @@ All notable changes to **Pinwheel Galaxy** are documented here. This project
 follows [Keep a Changelog](https://keepachangelog.com) conventions, plus a
 "Shipped" section for ongoing autonomous evolution.
 
+## [0.20.0] — 2026-08-23
+
+### Added
+
+- **Ringed Giant** — a new sky body: a ringed gas giant that drifts slowly
+  across the sky on its own clock, its rings spinning (inner particles racing
+  outer ones, per Kepler's third law). Adds a new object class to the sky
+  (gas giant + tilted particle ring) alongside the moon, distant galaxy and
+  black hole.
+  - `lib/ringedGiant.ts` (new) — pure, deterministic logic: sky-crossing drift,
+    atmospheric bands, palette, and a Keplerian particle ring; `projectRingParticle`
+    projects particles onto the tilted plane and reports which side sits behind
+    the planet for correct occlusion. `lib/ringedGiant.test.ts` (new, 9 tests).
+  - `lib/recipe.ts` — new `ringedGiant` layer and `?ringedGiant=on` URL param.
+  - `components/StarField.tsx` — new `ringedGiantMode` prop, drift clock, and a
+    draw pass (soft glow, banded disk with spherical shading, and a two-pass
+    ring: back rings → opaque disk → front rings). Painted behind the stars.
+  - `app/page.tsx` — dock toggle chip + prop wiring.
+  - Off by default; enabled from the Galaxy Controls dock (gold “Ringed Giant”
+    chip) or `?ringedGiant=on`. Pauses with reduced motion. Test count: 170/170.
+
 ## [0.19.0] — 2026-08-24
 
 ### Added

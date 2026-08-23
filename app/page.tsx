@@ -245,6 +245,7 @@ export default function Home() {
           supernovaMode={recipe.supernova}
           distantMode={recipe.distant}
           blackHoleMode={recipe.blackHole}
+          ringedGiantMode={recipe.ringedGiant}
           onZoom={setZoom}
           canvasRef={(el) => {
             canvasRef.current = el;
@@ -339,6 +340,12 @@ export default function Home() {
               active: recipe.blackHole,
               onToggle: () => toggle("blackHole"),
               color: "rgba(150,110,255,0.95)",
+            },
+            {
+              label: "Ringed Giant",
+              active: recipe.ringedGiant,
+              onToggle: () => toggle("ringedGiant"),
+              color: "rgba(240,190,90,0.9)",
             },
           ]}
         />
