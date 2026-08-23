@@ -246,6 +246,7 @@ export default function Home() {
           distantMode={recipe.distant}
           blackHoleMode={recipe.blackHole}
           ringedGiantMode={recipe.ringedGiant}
+          pulsarMode={recipe.pulsar}
           onZoom={setZoom}
           canvasRef={(el) => {
             canvasRef.current = el;
@@ -346,6 +347,12 @@ export default function Home() {
               active: recipe.ringedGiant,
               onToggle: () => toggle("ringedGiant"),
               color: "rgba(240,190,90,0.9)",
+            },
+            {
+              label: "Pulsar",
+              active: recipe.pulsar,
+              onToggle: () => toggle("pulsar"),
+              color: "rgba(143,227,255,0.9)",
             },
           ]}
         />

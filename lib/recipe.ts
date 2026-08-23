@@ -42,6 +42,9 @@ export interface GalaxyRecipe {
    * sky on its own clock, its rings spinning (inner particles racing outer
    * ones) as a new, majestic sky body. */
   ringedGiant: boolean;
+  /** Pulsar: an opt-in lighthouse neutron star — a tiny, brilliant core whose
+   * twin beams sweep the sky and whose brightness pulses on its own rhythm. */
+  pulsar: boolean;
 }
 
 export const DEFAULT_RECIPE: GalaxyRecipe = {
@@ -58,6 +61,7 @@ export const DEFAULT_RECIPE: GalaxyRecipe = {
   distant: false,
   blackHole: false,
   ringedGiant: false,
+  pulsar: false,
 };
 
 /** The URL param name for each layer, in a stable display order. */
@@ -75,6 +79,7 @@ export const RECIPE_PARAMS = {
   distant: "distant",
   blackHole: "blackHole",
   ringedGiant: "ringedGiant",
+  pulsar: "pulsar",
 } as const;
 
 /** Read one boolean layer param; missing / non-"on" values are `false`. */
@@ -102,6 +107,7 @@ export function parseRecipe(params: URLSearchParams): GalaxyRecipe {
     distant: parseLayer(params, RECIPE_PARAMS.distant),
     blackHole: parseLayer(params, RECIPE_PARAMS.blackHole),
     ringedGiant: parseLayer(params, RECIPE_PARAMS.ringedGiant),
+    pulsar: parseLayer(params, RECIPE_PARAMS.pulsar),
   };
 }
 
@@ -125,6 +131,7 @@ export function recipeToParams(recipe: Partial<GalaxyRecipe>): URLSearchParams {
   if (recipe.distant) p.set(RECIPE_PARAMS.distant, "on");
   if (recipe.blackHole) p.set(RECIPE_PARAMS.blackHole, "on");
   if (recipe.ringedGiant) p.set(RECIPE_PARAMS.ringedGiant, "on");
+  if (recipe.pulsar) p.set(RECIPE_PARAMS.pulsar, "on");
   return p;
 }
 
@@ -148,6 +155,7 @@ export function resolveRecipe(partial: Partial<GalaxyRecipe>): GalaxyRecipe {
     distant: partial.distant ?? DEFAULT_RECIPE.distant,
     blackHole: partial.blackHole ?? DEFAULT_RECIPE.blackHole,
     ringedGiant: partial.ringedGiant ?? DEFAULT_RECIPE.ringedGiant,
+    pulsar: partial.pulsar ?? DEFAULT_RECIPE.pulsar,
   };
 }
 
@@ -181,6 +189,7 @@ export function describeRecipe(recipe: GalaxyRecipe): string {
     on("Distant Galaxy", recipe.distant),
     on("Black Hole", recipe.blackHole),
     on("Ringed Giant", recipe.ringedGiant),
+    on("Pulsar", recipe.pulsar),
   ].filter(Boolean) as string[];
   return parts.length ? parts.join(", ") : "Default galaxy";
 }
