@@ -10,6 +10,11 @@ import { useSoundscape, installSoundscapeGesture } from "@/lib/useSoundscape";
 import { describeConfig } from "@/lib/galaxyPresets";
 import { describeRecipe } from "@/lib/recipe";
 import { deepLink, describePrint } from "@/lib/exportCard";
+import {
+  FULLSCREEN_SHORTCUT,
+  fullscreenUrl,
+  parseFullscreen,
+} from "@/lib/fullscreen";
 
 // "Report a bug" sends visitors straight to a pre-filled GitHub issue so bugs
 // land in the tracker where the autopilot picks them up. The body is a small
@@ -36,6 +41,21 @@ const BUG_REPORT_URL = (() => {
   return `${base}?${params.toString()}`;
 })();
 
+/**
+ * Whether the browser Fullscreen API is available.
+ *
+ * Checked lazily — inside event handlers and effects, never during render —
+ * so that the server render and the first client render produce identical
+ * output. Reading `typeof document` while rendering would make the server
+ * (`undefined`) and the client (`"object"`) diverge and break hydration.
+ */
+function fullscreenApiSupported(): boolean {
+  return (
+    typeof document !== "undefined" &&
+    !!document.documentElement.requestFullscreen
+  );
+}
+
 export default function Home() {
   const {
     config,
@@ -51,6 +71,84 @@ export default function Home() {
     toggleSound,
     shareQuery,
   } = useGalaxyParams();
+
+  // Fullscreen mode for the interactive galaxy (PINW-62). Off by default; the
+  // visitor can expand the starfield to fill the whole viewport and return to
+  // the normal hero layout. The flag can also be pre-seeded via ?fullscreen=on.
+  const [fullscreen, setFullscreen] = useState(false);
+  const heroRef = useRef<HTMLDivElement>(null);
+
+  // Seed from the URL on mount (after hydration, so there is no SSR mismatch).
+  useEffect(() => {
+    if (parseFullscreen(new URLSearchParams(window.location.search).get("fullscreen"))) {
+      setFullscreen(true);
+    }
+  }, []);
+
+  const updateFullscreenUrl = (next: boolean) => {
+    if (typeof window === "undefined") return;
+    const url = fullscreenUrl(window.location.pathname, window.location.search, next);
+    window.history.replaceState(null, "", url);
+  };
+
+  const enterFullscreen = () => {
+    setFullscreen(true);
+    const el = heroRef.current;
+    if (el && fullscreenApiSupported()) {
+      el.requestFullscreen?.().catch(() => {
+        // Falling back to the chrome-less expanded layout below; the request
+        // can be blocked (e.g. not user-triggered) and that is fine.
+      });
+    }
+    updateFullscreenUrl(true);
+  };
+
+  const exitFullscreen = () => {
+    setFullscreen(false);
+    if (fullscreenApiSupported() && document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => {});
+    }
+    updateFullscreenUrl(false);
+  };
+
+  // Detect exits that we did not trigger ourselves (Escape key, browser UI).
+  useEffect(() => {
+    if (!fullscreenApiSupported()) return;
+    const onChange = () => {
+      if (document.fullscreenElement === null) {
+        exitFullscreen();
+      }
+    };
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
+  // Keyboard shortcut: press "f" (not while typing into a field) to toggle.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (
+        e.key === FULLSCREEN_SHORTCUT &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey
+      ) {
+        e.preventDefault();
+        if (fullscreen) exitFullscreen();
+        else enterFullscreen();
+      }
+      // When we are in the fallback (no browser Fullscreen API) layout, the
+      // browser does not handle Escape for us, so exit manually.
+      if (e.key === "Escape" && fullscreen && !fullscreenApiSupported()) {
+        e.preventDefault();
+        exitFullscreen();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [fullscreen]);
 
   // The Cosmic Soundscape runtime: turns the live galaxy into sound. Muted by
   // default; audio starts on the first user gesture (see installSoundscapeGesture).
@@ -116,8 +214,23 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* Hero with the interactive starfield */}
-      <section className="relative flex min-h-screen items-center justify-center px-6">
+      {/* Hero with the interactive starfield.
+
+          In fullscreen mode (PINW-62) this section becomes the fullscreen target:
+          it expands to fill the whole viewport (via the browser Fullscreen API
+          where available, or the fixed inset-0 layout as a fallback) so the
+          starfield fills the screen. The hero text is hidden for an immersive
+          view; the control dock stays reachable and collapsible. */}
+      <section
+        ref={heroRef}
+        data-fullscreen={fullscreen ? "" : undefined}
+        className={[
+          "relative flex items-center justify-center px-6",
+          fullscreen
+            ? "fixed inset-0 z-50 h-screen w-full bg-black/80"
+            : "min-h-screen",
+        ].join(" ")}
+      >
         <StarField
           active={gravity}
           constellation={recipe.constellation}
@@ -137,7 +250,10 @@ export default function Home() {
           }}
         />
 
-        <div className="relative z-10 max-w-3xl text-center">
+        {/* The hero heading is hidden while the galaxy fills the screen, so
+            fullscreen mode stays an immersive view of the starfield. */}
+        {!fullscreen && (
+          <div className="relative z-10 max-w-3xl text-center">
           <p className="animate-fade-up opacity-0 animation-delay-100 text-sm font-medium uppercase tracking-[0.3em] text-cosmos-cyan">
             An ever-evolving product
           </p>
@@ -160,6 +276,7 @@ export default function Home() {
             </a>
           </div>
         </div>
+        )}
 
         {/* Galaxy control dock — tune theme, arms, spin, stars + gravity */}
         <GalaxyDock
@@ -169,6 +286,8 @@ export default function Home() {
           toggleGravity={toggleGravity}
           shuffle={shuffle}
           label={shareQuery}
+          fullscreen={fullscreen}
+          onToggleFullscreen={fullscreen ? exitFullscreen : enterFullscreen}
           share={
             <GalaxyShareCard
               getCanvas={() => canvasRef.current}
