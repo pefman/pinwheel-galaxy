@@ -80,6 +80,17 @@ import {
   computeDistantGalaxy,
   type DistantGalaxy,
 } from "@/lib/distantGalaxy";
+import {
+  DISK_RPS,
+  DISK_OUTER_FRACTION,
+  computeBlackHole,
+  accretionPoint,
+  dopplerFactor,
+  dopplerHue,
+  einsteinRadius,
+  isInsideEventHorizon,
+  type BlackHoleState,
+} from "@/lib/blackHole";
 
 const SPRING_K = 0.02; // how strongly stars return to their orbit
 const DAMPING = 0.86; // velocity damping per frame
@@ -207,6 +218,7 @@ export default function StarField({
   moonMode = false,
   supernovaMode = false,
   distantMode = false,
+  blackHoleMode = false,
   onZoom,
   canvasRef,
 }: {
@@ -242,6 +254,12 @@ export default function StarField({
    * deep background. Pure atmosphere — never touches the stars.
    */
   distantMode?: boolean;
+  /**
+   * Black Hole: an opt-in placeable gravitational singularity with an
+   * accretion disk, photon ring and event horizon. Draggable to reposition.
+   * Pure atmosphere — never touches the stars or the spring physics.
+   */
+  blackHoleMode?: boolean;
   /** Called with the live zoom whenever it changes, so the parent can share it. */
   onZoom?: (zoom: number) => void;
   /** Forwarded to the canvas element, so the parent can capture it (e.g. for a
@@ -326,6 +344,14 @@ export default function StarField({
     // frames; only the global rotation advances on this clock.
     let distantGalaxyTime = 0;
     let distant: DistantGalaxy | null = null;
+    // Black Hole: a running clock for the disk's spin, the static hole state
+    // (built in `resize()` so it keeps its shape), and drag state so the visitor
+    // can reposition the hole by its glow. Built when the layer is on; cleared
+    // when off. Pure atmosphere — never touches the stars or the spring physics.
+    let blackHoleTime = 0;
+    let blackHole: BlackHoleState = {} as BlackHoleState;
+    let blackHoleDragging = false;
+    let blackHoleDragOffset = { x: 0, y: 0 };
 
     const resize = () => {
       dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
@@ -369,6 +395,14 @@ export default function StarField({
       } else {
         distant = null;
       }
+      // Black Hole: (re)build the placeable hole for the current sky size when
+      // the layer is on; clear it when off. Pure function of size + seed, so it
+      // keeps its shape across resizes (dragging only repositions, never rebuilds).
+      if (blackHoleMode) {
+        blackHole = computeBlackHole({ width: w, height: h });
+      } else {
+        blackHole = {} as BlackHoleState;
+      }
     };
 
     const onMove = (e: MouseEvent) => {
@@ -395,6 +429,48 @@ export default function StarField({
       mouse.active = false;
       mouse.x = -9999;
       mouse.y = -9999;
+    };
+
+    // Black Hole: drag to reposition. A press inside the hole's outer glow
+    // grabs the hole; moving the pointer drags it; release lets go. Purely
+    // cosmetic — repositions the state, never the spring physics.
+    const blackHoleGrabRadius = () => blackHole.radius * 3.6;
+    const blackHoleDown = (e: MouseEvent) => {
+      if (!blackHoleMode || !blackHole) return;
+      const d = Math.hypot(e.clientX - blackHole.x, e.clientY - blackHole.y);
+      if (d <= blackHoleGrabRadius()) {
+        blackHoleDragging = true;
+        blackHoleDragOffset.x = e.clientX - blackHole.x;
+        blackHoleDragOffset.y = e.clientY - blackHole.y;
+      }
+    };
+    const blackHoleMove = (e: MouseEvent) => {
+      if (!blackHoleDragging || !blackHole) return;
+      blackHole.x = e.clientX - blackHoleDragOffset.x;
+      blackHole.y = e.clientY - blackHoleDragOffset.y;
+    };
+    const blackHoleUp = () => {
+      blackHoleDragging = false;
+    };
+    const blackHoleTouchStart = (e: TouchEvent) => {
+      if (!blackHoleMode || !blackHole || e.touches.length === 0) return;
+      const t = e.touches[0];
+      const d = Math.hypot(t.clientX - blackHole.x, t.clientY - blackHole.y);
+      if (d <= blackHoleGrabRadius()) {
+        blackHoleDragging = true;
+        blackHoleDragOffset.x = t.clientX - blackHole.x;
+        blackHoleDragOffset.y = t.clientY - blackHole.y;
+      }
+    };
+    const blackHoleTouchMove = (e: TouchEvent) => {
+      if (!blackHoleDragging || !blackHole || e.touches.length === 0) return;
+      const t = e.touches[0];
+      blackHole.x = t.clientX - blackHoleDragOffset.x;
+      blackHole.y = t.clientY - blackHoleDragOffset.y;
+      e.preventDefault();
+    };
+    const blackHoleTouchEnd = () => {
+      blackHoleDragging = false;
     };
 
     // Galaxy Zoom: wheel / trackpad scroll zooms in and out, clamped and eased.
@@ -456,6 +532,12 @@ export default function StarField({
       // distant, essentially-frozen backdrop.
       if (distantMode) {
         distantGalaxyTime += dt;
+      }
+
+      // Black Hole: advance the disk's spin clock (rad). The hole itself is
+      // static; only the disk rotation advances, so the accretion disk swirls.
+      if (blackHoleMode) {
+        blackHole.spinPhase += dt * DISK_RPS;
       }
 
       const cx = w / 2;
@@ -1102,6 +1184,87 @@ export default function StarField({
         }
       }
 
+      // Black Hole: a placeable singularity with an accretion disk, photon
+      // ring and event horizon, drawn at the very end (screen scale, on top of
+      // the stars) so the opaque horizon hides whatever sits behind it. The
+      // disk's near half wraps in front of the horizon; its Doppler shift makes
+      // the approaching side brighter/bluer and the receding side dimmer/redder.
+      // Pure atmosphere — never touches the stars or the spring physics.
+      if (blackHoleMode && blackHole) {
+        const bh = blackHole;
+        const bx = bh.x;
+        const by = bh.y;
+        const R = bh.radius;
+        const spin = bh.spinPhase;
+        const tilt = bh.tilt;
+        const viewerAz = 0; // viewer's azimuth for the Doppler projection
+        ctx.save();
+        // Soft outer accretion halo.
+        const halo = ctx.createRadialGradient(bx, by, R * 1.5, bx, by, R * 3.6);
+        halo.addColorStop(0, `hsla(${bh.hue}, 100%, 72%, 0.55)`);
+        halo.addColorStop(0.4, `hsla(${bh.hue - 4}, 100%, 60%, 0.30)`);
+        halo.addColorStop(1, `hsla(${bh.hue}, 100%, 50%, 0)`);
+        ctx.fillStyle = halo;
+        ctx.beginPath();
+        ctx.arc(bx, by, R * 3.6, 0, Math.PI * 2);
+        ctx.fill();
+        // Photon ring — the thin, bright circle of bent light just outside the
+        // event horizon.
+        ctx.strokeStyle = `hsla(${bh.hue + 8}, 100%, 82%, 0.9)`;
+        ctx.lineWidth = Math.max(1.2, R * 0.06);
+        ctx.beginPath();
+        ctx.arc(bx, by, einsteinRadius(R) * 0.82, 0, Math.PI * 2);
+        ctx.stroke();
+        // Event horizon — the pure-black disc that hides the stars behind it.
+        const horizon = ctx.createRadialGradient(bx, by, R * 0.2, bx, by, R);
+        horizon.addColorStop(0, "rgba(0,0,0,1)");
+        horizon.addColorStop(1, "rgba(0,0,0,0.98)");
+        ctx.fillStyle = horizon;
+        ctx.beginPath();
+        ctx.arc(bx, by, R, 0, Math.PI * 2);
+        ctx.fill();
+        // A faint photon glow just outside the horizon, on the near side.
+        const innerGlow = ctx.createRadialGradient(bx, by, R, bx, by, R * 1.6);
+        innerGlow.addColorStop(0, `hsla(${bh.hue}, 100%, 80%, 0.5)`);
+        innerGlow.addColorStop(1, `hsla(${bh.hue}, 100%, 70%, 0)`);
+        ctx.fillStyle = innerGlow;
+        ctx.beginPath();
+        ctx.arc(bx, by, R * 1.6, 0, Math.PI * 2);
+        ctx.fill();
+        // Accretion disk: draw only the near half of the particles (the front
+        // of the disk wrapping in front of the horizon). The far half is
+        // hidden behind the opaque event horizon.
+        for (const p of bh.particles) {
+          if (Math.sin(p.angle) <= 0) continue; // far side — behind the hole
+          const pt = accretionPoint(p, bx, by, spin, tilt, R);
+          const dx = pt.x - bx;
+          const dy = pt.y - by;
+          if (Math.hypot(dx, dy) < R) continue; // inside the horizon
+          const factor = dopplerFactor(p.angle, spin, viewerAz);
+          const hue = dopplerHue(bh.hue, factor);
+          const alpha = Math.max(0, 0.35 + factor * 0.5) * p.brightness;
+          if (alpha <= 0.02) continue;
+          const size = R * (0.5 + p.brightness * 0.9) * (1.2 - p.radiusFrac / DISK_OUTER_FRACTION + 0.3);
+          const grad = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, size);
+          grad.addColorStop(0, `hsla(${hue}, 100%, ${78 + factor * 8}%, ${alpha})`);
+          grad.addColorStop(1, `hsla(${hue}, 100%, 60%, 0)`);
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // Black Hole: show a grab cursor when the pointer is over the hole's
+      // glow, so the affordance to drag it is obvious.
+      if (blackHoleMode && canvasElementRef.current) {
+        const near =
+          blackHole &&
+          Math.hypot(mouse.x - blackHole.x, mouse.y - blackHole.y) <= blackHoleGrabRadius();
+        canvasElementRef.current.style.cursor = blackHoleDragging ? "grabbing" : near ? "grab" : "";
+      }
+
       raf = requestAnimationFrame(frame);
     };
 
@@ -1114,6 +1277,15 @@ export default function StarField({
     canvas.addEventListener("touchstart", onTouchStart, { passive: true });
     canvas.addEventListener("touchmove", onTouchMove, { passive: false });
     canvas.addEventListener("touchend", onTouchEnd);
+    // Black Hole drag: only when the layer is on.
+    if (blackHoleMode) {
+      canvas.addEventListener("mousedown", blackHoleDown);
+      window.addEventListener("mousemove", blackHoleMove, { passive: true });
+      window.addEventListener("mouseup", blackHoleUp);
+      canvas.addEventListener("touchstart", blackHoleTouchStart, { passive: true });
+      canvas.addEventListener("touchmove", blackHoleTouchMove, { passive: false });
+      canvas.addEventListener("touchend", blackHoleTouchEnd);
+    }
     window.addEventListener("resize", resize);
     raf = requestAnimationFrame(frame);
 
@@ -1127,6 +1299,14 @@ export default function StarField({
       canvas.removeEventListener("touchstart", onTouchStart);
       canvas.removeEventListener("touchmove", onTouchMove);
       canvas.removeEventListener("touchend", onTouchEnd);
+      if (blackHoleMode) {
+        canvas.removeEventListener("mousedown", blackHoleDown);
+        window.removeEventListener("mousemove", blackHoleMove);
+        window.removeEventListener("mouseup", blackHoleUp);
+        canvas.removeEventListener("touchstart", blackHoleTouchStart);
+        canvas.removeEventListener("touchmove", blackHoleTouchMove);
+        canvas.removeEventListener("touchend", blackHoleTouchEnd);
+      }
       window.removeEventListener("resize", resize);
     };
   }, [
@@ -1143,6 +1323,7 @@ export default function StarField({
     moonMode,
     supernovaMode,
     distantMode,
+    blackHoleMode,
     onZoom,
   ]);
 

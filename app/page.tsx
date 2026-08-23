@@ -130,6 +130,7 @@ export default function Home() {
           moonMode={recipe.moon}
           supernovaMode={recipe.supernova}
           distantMode={recipe.distant}
+          blackHoleMode={recipe.blackHole}
           onZoom={setZoom}
           canvasRef={(el) => {
             canvasRef.current = el;
@@ -212,6 +213,12 @@ export default function Home() {
               active: recipe.distant,
               onToggle: () => toggle("distant"),
               color: "rgba(180,150,255,0.85)",
+            },
+            {
+              label: "Black Hole",
+              active: recipe.blackHole,
+              onToggle: () => toggle("blackHole"),
+              color: "rgba(150,110,255,0.95)",
             },
           ]}
         />

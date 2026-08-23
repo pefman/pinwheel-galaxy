@@ -35,6 +35,9 @@ export interface GalaxyRecipe {
   /** Distant Galaxy: an opt-in far-away spiral galaxy slowly rotating in the
    * deep background. */
   distant: boolean;
+  /** Black Hole: an opt-in placeable gravitational singularity with an
+   * accretion disk that warps the sky around it. */
+  blackHole: boolean;
 }
 
 export const DEFAULT_RECIPE: GalaxyRecipe = {
@@ -49,6 +52,7 @@ export const DEFAULT_RECIPE: GalaxyRecipe = {
   moon: false,
   supernova: false,
   distant: false,
+  blackHole: false,
 };
 
 /** The URL param name for each layer, in a stable display order. */
@@ -64,6 +68,7 @@ export const RECIPE_PARAMS = {
   moon: "moon",
   supernova: "supernova",
   distant: "distant",
+  blackHole: "blackHole",
 } as const;
 
 /** Read one boolean layer param; missing / non-"on" values are `false`. */
@@ -89,6 +94,7 @@ export function parseRecipe(params: URLSearchParams): GalaxyRecipe {
     moon: parseLayer(params, RECIPE_PARAMS.moon),
     supernova: parseLayer(params, RECIPE_PARAMS.supernova),
     distant: parseLayer(params, RECIPE_PARAMS.distant),
+    blackHole: parseLayer(params, RECIPE_PARAMS.blackHole),
   };
 }
 
@@ -110,6 +116,7 @@ export function recipeToParams(recipe: Partial<GalaxyRecipe>): URLSearchParams {
   if (recipe.moon) p.set(RECIPE_PARAMS.moon, "on");
   if (recipe.supernova) p.set(RECIPE_PARAMS.supernova, "on");
   if (recipe.distant) p.set(RECIPE_PARAMS.distant, "on");
+  if (recipe.blackHole) p.set(RECIPE_PARAMS.blackHole, "on");
   return p;
 }
 
@@ -131,6 +138,7 @@ export function resolveRecipe(partial: Partial<GalaxyRecipe>): GalaxyRecipe {
     moon: partial.moon ?? DEFAULT_RECIPE.moon,
     supernova: partial.supernova ?? DEFAULT_RECIPE.supernova,
     distant: partial.distant ?? DEFAULT_RECIPE.distant,
+    blackHole: partial.blackHole ?? DEFAULT_RECIPE.blackHole,
   };
 }
 
@@ -162,6 +170,7 @@ export function describeRecipe(recipe: GalaxyRecipe): string {
     on("Moon", recipe.moon),
     on("Supernovae", recipe.supernova),
     on("Distant Galaxy", recipe.distant),
+    on("Black Hole", recipe.blackHole),
   ].filter(Boolean) as string[];
   return parts.length ? parts.join(", ") : "Default galaxy";
 }

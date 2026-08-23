@@ -63,6 +63,7 @@ test("parseRecipe and recipeToParams round-trip", () => {
     moon: false,
     supernova: false,
     distant: false,
+    blackHole: false,
   };
   const qs = recipeToParams(recipe);
   assert.deepEqual(parseRecipe(qs), recipe);
@@ -100,6 +101,7 @@ test("RECIPE_PARAMS covers every layer exactly once", () => {
     "moon",
     "supernova",
     "distant",
+    "blackHole",
   ]);
 });
 

@@ -5,6 +5,67 @@ additive and dated. New features are added here every evolution cycle.
 
 ---
 
+## Black Hole — a Placeable Gravitational Singularity
+
+- **Date added:** 2026-08-23
+- **Version:** 0.18.0
+- **Status:** Shipped & live on Vercel — https://pinwheel-galaxy.vercel.app
+
+### What + why
+
+Every sky layer is either a field of stars or a soft atmospheric glow — and a
+single, extreme body. The **Black Hole** adds that body: a placeable singular
+gravity well with a pure-black event horizon, a photon ring and a swirling
+accretion disk of infalling matter. It complements the interactive spiral
+galaxy the way the moon, aurora and distant galaxy do — a recognisable, dramatic
+focal point — but with a new interaction: you can **drag it anywhere** by its
+glow. The disk's Doppler shift (approaching side brighter/bluer, receding side
+dimmer/redder) gives it the look of a real black hole, and its opaque horizon
+hides the stars behind it.
+
+### How it works (high-level)
+
+- `lib/blackHole.ts` (new) holds the **pure** logic, unit-tested
+  (`lib/blackHole.test.ts`, 13 tests). A deterministic `mulberry32` PRNG drives
+  `computeBlackHole`, which picks a seeded, off-centre, edge-padded placement
+  and precomputes a field of Keplerian accretion particles (inner particles
+  orbit faster by `r^-1.5`, brightness falls off toward the edge). `accretionPoint`
+  projects a particle onto the tilted, spinning disk; `dopplerFactor` /
+  `dopplerHue` give the blueshift/redshift; `deflectionMagnification` /
+  `einsteinRadius` model the gravitational lensing; `isInsideEventHorizon` tests
+  the horizon. Everything is plain numbers, so it is unit-tested without a canvas.
+- `components/StarField.tsx` gained a `blackHoleMode` prop. It builds the hole
+  once in `resize()` (so it keeps its shape across resizes) and advances a
+  disk-spin clock on a running timer. A mouse/touch drag repositions it. At the
+  end of each frame it paints the outer halo, photon ring, event horizon and the
+  near half of the accretion disk — on top of the stars, so the horizon hides
+  whatever sits behind it. Pure atmosphere; never touches the spring physics.
+- `lib/recipe.ts` gained a shareable `?blackHole=` layer toggle and it is
+  surfaced in `describeRecipe`.
+- `app/page.tsx` wires `blackHoleMode={recipe.blackHole}` and adds a **Black
+  Hole** chip to the Galaxy Dock.
+
+### User-facing behavior
+
+1. `npm install` then `npm run build` and `npm start` (or `npm run dev`).
+2. Open the site. In the hero dock, click **Black Hole: Off** → **On**.
+3. A black hole with a swirling, Doppler-brightened accretion disk appears in
+   the upper sky. Drag it by its glow to move it anywhere.
+4. Open `?blackHole=on` to pre-enable it; the URL re-hydrates the exact layer.
+5. Turn on `prefers-reduced-motion` — the disk keeps spinning (a slow, gentle
+   swirl); the hole is otherwise a striking static silhouette.
+
+### Known limitations / follow-ups
+
+- The accretion disk is drawn only as its near half (the far half is hidden
+  behind the opaque event horizon); a future cycle could render the full
+  wrapped disk with per-particle depth sorting.
+- The event horizon hides stars but does not yet gravitationally bend their
+  light (the `deflectionMagnification` model is exposed and tested but not
+  yet applied as a real lensing distortion in the star field).
+
+---
+
 ## Distant Galaxy — a Far-Away Spiral in the Deep Background
 
 - **Date added:** 2026-08-23

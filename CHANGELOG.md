@@ -4,6 +4,33 @@ All notable changes to **Pinwheel Galaxy** are documented here. This project
 follows [Keep a Changelog](https://keepachangelog.com) conventions, plus a
 "Shipped" section for ongoing autonomous evolution.
 
+## [0.18.0] — 2026-08-23
+
+### Added
+
+- **Black Hole** — the sky now holds a placeable gravitational singularity. A
+  black hole is a pure-black event horizon ringed by a photon ring and a
+  swirling accretion disk of infalling matter. It appears off-default anywhere
+  in the upper sky and you can **drag it by its glow** to reposition it. The
+  disk's near half wraps in front of the horizon; its Doppler shift makes the
+  approaching side brighter and bluer and the receding side dimmer and redder
+  — the hallmark of real accretion disks. The opaque horizon hides whatever
+  stars sit behind it. Purely additive and off by default, orthogonal to gravity,
+  warp, nebula, constellations, meteors, variable stars, Stellar Depth, zoom, the
+  comet, the moon, the aurora, the supernovae and the distant galaxy.
+  - `lib/blackHole.ts` (new) — the **pure** model. `computeBlackHole` picks a
+    deterministic, off-centre, edge-padded placement and precomputes a field of
+    Keplerian accretion particles (inner particles orbit faster, brightness
+    falls off toward the edge). `accretionPoint` projects a particle onto the
+    tilted, spinning disk; `dopplerFactor` / `dopplerHue` give the
+    blueshift/redshift; `deflectionMagnification` / `einsteinRadius` model the
+    gravitational lensing; `isInsideEventHorizon` tests the event horizon.
+  - `components/StarField.tsx` — new `blackHoleMode` prop, a draggable hole
+    (mouse + touch), a running disk-spin clock, and an end-of-frame draw of the
+    halo, photon ring, event horizon and near-half accretion disk.
+  - `lib/recipe.ts` — the shareable `?blackHole=` layer toggle.
+  - `app/page.tsx` — the **Black Hole** toggle chip in the Galaxy Dock.
+
 ## [0.17.0] — 2026-08-23
 
 ### Added
