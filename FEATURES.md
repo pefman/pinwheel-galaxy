@@ -5,6 +5,67 @@ additive and dated. New features are added here every evolution cycle.
 
 ---
 
+## Ringed Giant — a Drifting, Ringed Gas Giant
+
+- **Date added:** 2026-08-23
+- **Version:** 0.20.0
+- **Status:** Shipped & live on Vercel — https://pinwheel-galaxy.vercel.app
+
+### What + why
+
+Every sky body so far is either a field of stars, a soft glow / atmosphere, a
+lit sphere (the moon) or an extreme body (the black hole). The Ringed Giant adds
+a genuinely **new object class**: a gas giant with a real, tilted, particle-built
+ring system — the Saturn-style world that dominates trending browser universe
+explorers and pairs perfectly with the site's existing moon, distant galaxy and
+black hole. It drifts slowly across the sky on its own clock while its rings spin
+(inner particles racing their outer ones, as Kepler's third law dictates),
+giving the whole a slow, majestic, recognisable body to sit among the stars.
+
+### How it works (high-level)
+
+`lib/ringedGiant.ts` is a pure, deterministic module: `computeRingedGiant({
+time, width, height, seed })` returns the giant's position (it drifts on a
+`RINGED_GIANT_TRANSIT_MS` clock, arcing gently across the sky), its atmospheric
+bands (clipped to the disk, squished toward the poles to hug the sphere), a
+chosen palette, and a ring of `RING_PARTICLES` orbiting particles each with a
+Keplerian rate (`v ∝ r^-1.5`). `projectRingParticle` projects a particle onto the
+tilted sky plane and reports whether it sits on the far side of the ring plane
+(`behind`), which is what lets `StarField.tsx` render the correct occlusion order
+— back rings, then the opaque planet disk, then the front rings. The whole state
+is recomputed each frame from the running clock (like the moon) so it drifts
+smoothly.
+
+### Key files / components
+
+- `lib/ringedGiant.ts` — pure logic (new)
+- `lib/ringedGiant.test.ts` — 9 tests (new)
+- `lib/recipe.ts` — `ringedGiant` layer + `ringedGiant` URL param
+- `components/StarField.tsx` — new `ringedGiantMode` prop, drift clock, and draw
+  pass (glow, banded disk, spherical shading, two-pass ring)
+- `app/page.tsx` — dock toggle chip + prop wiring
+
+### User-facing behavior
+
+Off by default. Enable it from the Galaxy Controls dock (a gold “Ringed Giant”
+chip) or via `?ringedGiant=on`. Pauses with reduced motion. Painted behind the
+interactive galaxy so stars stay foreground. Palette, bands and ring field are
+fixed per seed, so the same link always shows the same giant.
+
+### How to test / try it
+
+`npm run test` (170 pass) and `npm run build` (green). Try it:
+`https://pinwheel-galaxy.vercel.app/?ringedGiant=on`.
+
+### Known limitations / follow-ups
+
+- The ring is a single particle field; a Cassini-style gap and multiple ring
+  bands are a natural follow-up.
+- The giant drifts on a fixed arc; a placeable/draggable variant (like the black
+  hole) is a possible future extension.
+
+---
+
 ## Fullscreen Galaxy — Immerse the Hero in the Whole Viewport
 
 - **Date added:** 2026-08-24

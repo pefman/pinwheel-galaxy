@@ -38,6 +38,10 @@ export interface GalaxyRecipe {
   /** Black Hole: an opt-in placeable gravitational singularity with an
    * accretion disk that warps the sky around it. */
   blackHole: boolean;
+  /** Ringed Giant: an opt-in ringed gas giant that drifts slowly across the
+   * sky on its own clock, its rings spinning (inner particles racing outer
+   * ones) as a new, majestic sky body. */
+  ringedGiant: boolean;
 }
 
 export const DEFAULT_RECIPE: GalaxyRecipe = {
@@ -53,6 +57,7 @@ export const DEFAULT_RECIPE: GalaxyRecipe = {
   supernova: false,
   distant: false,
   blackHole: false,
+  ringedGiant: false,
 };
 
 /** The URL param name for each layer, in a stable display order. */
@@ -69,6 +74,7 @@ export const RECIPE_PARAMS = {
   supernova: "supernova",
   distant: "distant",
   blackHole: "blackHole",
+  ringedGiant: "ringedGiant",
 } as const;
 
 /** Read one boolean layer param; missing / non-"on" values are `false`. */
@@ -95,6 +101,7 @@ export function parseRecipe(params: URLSearchParams): GalaxyRecipe {
     supernova: parseLayer(params, RECIPE_PARAMS.supernova),
     distant: parseLayer(params, RECIPE_PARAMS.distant),
     blackHole: parseLayer(params, RECIPE_PARAMS.blackHole),
+    ringedGiant: parseLayer(params, RECIPE_PARAMS.ringedGiant),
   };
 }
 
@@ -117,6 +124,7 @@ export function recipeToParams(recipe: Partial<GalaxyRecipe>): URLSearchParams {
   if (recipe.supernova) p.set(RECIPE_PARAMS.supernova, "on");
   if (recipe.distant) p.set(RECIPE_PARAMS.distant, "on");
   if (recipe.blackHole) p.set(RECIPE_PARAMS.blackHole, "on");
+  if (recipe.ringedGiant) p.set(RECIPE_PARAMS.ringedGiant, "on");
   return p;
 }
 
@@ -139,6 +147,7 @@ export function resolveRecipe(partial: Partial<GalaxyRecipe>): GalaxyRecipe {
     supernova: partial.supernova ?? DEFAULT_RECIPE.supernova,
     distant: partial.distant ?? DEFAULT_RECIPE.distant,
     blackHole: partial.blackHole ?? DEFAULT_RECIPE.blackHole,
+    ringedGiant: partial.ringedGiant ?? DEFAULT_RECIPE.ringedGiant,
   };
 }
 
@@ -171,6 +180,7 @@ export function describeRecipe(recipe: GalaxyRecipe): string {
     on("Supernovae", recipe.supernova),
     on("Distant Galaxy", recipe.distant),
     on("Black Hole", recipe.blackHole),
+    on("Ringed Giant", recipe.ringedGiant),
   ].filter(Boolean) as string[];
   return parts.length ? parts.join(", ") : "Default galaxy";
 }
