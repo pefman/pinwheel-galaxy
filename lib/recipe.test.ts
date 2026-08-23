@@ -65,6 +65,7 @@ test("parseRecipe and recipeToParams round-trip", () => {
     distant: false,
     blackHole: false,
     ringedGiant: false,
+    pulsar: false,
   };
   const qs = recipeToParams(recipe);
   assert.deepEqual(parseRecipe(qs), recipe);
@@ -104,6 +105,7 @@ test("RECIPE_PARAMS covers every layer exactly once", () => {
     "distant",
     "blackHole",
     "ringedGiant",
+    "pulsar",
   ]);
 });
 

@@ -5,6 +5,74 @@ additive and dated. New features are added here every evolution cycle.
 
 ---
 
+## Pulsar — a Lighthouse Neutron Star
+
+- **Date added:** 2026-08-24
+- **Version:** 0.21.0
+- **Status:** Shipped & live on Vercel — https://pinwheel-galaxy.vercel.app
+
+### What + why
+
+Every sky body so far is either a slow-drifting world, a soft glow / atmosphere,
+a lit sphere or an extreme body. None of them is **time-keeping**: they all hold
+a steady shape on clocks far slower than a human notice. The Pulsar adds a
+genuinely different kind of sky body — a rapidly rotating **neutron star** whose
+twin radiation beams sweep the sky like a lighthouse, so its core **pulses** on
+its own rhythm. It is a time-domain beacon rather than a static object, which
+none of the other bodies are, and it pairs perfectly with the moon, distant
+galaxy and black hole as another small, living world to sit among the stars.
+
+It is **purely additive and non-breaking**: it never touches the stars, the
+spring physics, gravity, warp, nebula, constellations, meteors, variable stars,
+Stellar Depth, zoom, the comet, the aurora, supernovae, the distant galaxy or the
+black hole — it only reads its own clock and paints a soft glow.
+
+### How it works (high-level)
+
+`lib/pulsar.ts` is a pure, deterministic module: `computePulsar({ time, width,
+height, seed })` returns the pulsar's drifting position (a `PULSAR_TRANSIT_MS`
+clock, arcing gently across the sky like the moon), its core radius, a `pulse`
+factor 0…1, its two opposing beams, and a chosen palette. The rotation is modelled
+as a tilted axis the star spins about; `beamDirectionAt` drops the out-of-plane
+component so the beam sweeps a clean arc, and `pulseFactor` is the absolute cosine
+between a beam and the vector toward the centre of the screen — so a full rotation
+yields one pulse per beam (two per rotation), the core flaring maximally when a
+beam swings at the viewer. `beamEndpoint` gives the draw code each beam's outer
+end. The whole state is recomputed each frame from the running clock so the beam
+sweeps smoothly and the core flares in step. Palettes and geometry are fixed per
+seed, so the same link always shows the same pulsar.
+
+### Key files / components
+
+- `lib/pulsar.ts` — pure logic (new)
+- `lib/pulsar.test.ts` — 11 tests (new)
+- `lib/recipe.ts` — `pulsar` layer + `pulsar` URL param
+- `components/StarField.tsx` — new `pulsarMode` prop, drift/sweep clock, and draw
+  pass (additive beam cones + a pulsing core with a soft halo)
+- `app/page.tsx` — dock toggle chip + prop wiring
+
+### User-facing behavior
+
+Off by default. Enable it from the Galaxy Controls dock (a cyan “Pulsar” chip)
+or via `?pulsar=on`. The sweep is brisk (~1.3 s per rotation) but the sky drift
+is slow and meditative, so it reads as a living beacon rather than a strobe.
+Pauses with reduced motion (the beam freezes, the core still glows). Painted
+behind the interactive galaxy so stars stay foreground. Pure atmosphere — never
+touches the stars or the spring physics.
+
+### How to test / try it
+
+`npm run test` (181 pass) and `npm run build` (green). Try it:
+`https://pinwheel-galaxy.vercel.app/?pulsar=on`.
+
+### Known limitations / follow-ups
+
+- The beam sweeps an arc (a tilted-axis projection); a full 360° “propeller”
+  sweep is a possible stylistic variant.
+- A single pulsar per sky; a sparse field of several is a natural follow-up.
+
+---
+
 ## Ringed Giant — a Drifting, Ringed Gas Giant
 
 - **Date added:** 2026-08-23

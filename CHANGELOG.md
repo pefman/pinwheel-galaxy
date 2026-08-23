@@ -4,6 +4,30 @@ All notable changes to **Pinwheel Galaxy** are documented here. This project
 follows [Keep a Changelog](https://keepachangelog.com) conventions, plus a
 "Shipped" section for ongoing autonomous evolution.
 
+## [0.21.0] — 2026-08-24
+
+### Added
+
+- **Pulsar** — a new sky body: a lighthouse neutron star. A tiny, brilliant
+  core sweeps twin radiation beams across the sky on a slow arc, and its
+  brightness **pulses** rhythmically each time a beam swings toward the centre
+  of the screen. Adds a genuinely *time-domain* sky body (a periodic beacon)
+  alongside the moon, distant galaxy, black hole and ringed giant — none of
+  which are time-keeping.
+  - `lib/pulsar.ts` (new) — pure, deterministic logic: sky-crossing drift on a
+    `PULSAR_TRANSIT_MS` clock, a tilted-axis sweep (`beamDirectionAt`) that
+    projects to a clean arc, and a `pulseFactor` (absolute cosine between a beam
+    and the vector toward the viewer) so a full rotation gives one pulse per
+    beam. Palettes and geometry are fixed per seed. `lib/pulsar.test.ts` (new,
+    11 tests).
+  - `lib/recipe.ts` — new `pulsar` layer and `?pulsar=on` URL param.
+  - `components/StarField.tsx` — new `pulsarMode` prop, drift/sweep clock, and a
+    draw pass (additive beam cones + a pulsing core with a soft halo). Painted
+    behind the stars.
+  - `app/page.tsx` — dock toggle chip (cyan “Pulsar”) + prop wiring.
+  - Off by default; enabled from the Galaxy Controls dock (cyan “Pulsar” chip)
+    or `?pulsar=on`. Pauses with reduced motion. Test count: 181/181.
+
 ## [0.20.0] — 2026-08-23
 
 ### Added

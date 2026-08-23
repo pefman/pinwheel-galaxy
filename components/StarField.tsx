@@ -82,6 +82,13 @@ import {
 } from "@/lib/ringedGiant";
 import { computeSupernova } from "@/lib/supernova";
 import {
+  computePulsar,
+  beamEndpoint,
+  PULSAR_BEAM_LENGTH_FRACTION,
+  PULSAR_BEAM_HALF_ANGLE,
+  type PulsarState,
+} from "@/lib/pulsar";
+import {
   ROTATION_SECONDS_PER_TURN,
   computeDistantGalaxy,
   type DistantGalaxy,
@@ -249,6 +256,7 @@ export default function StarField({
   distantMode = false,
   blackHoleMode = false,
   ringedGiantMode = false,
+  pulsarMode = false,
   onZoom,
   canvasRef,
 }: {
@@ -296,6 +304,13 @@ export default function StarField({
    * Pure atmosphere — never touches the stars or the spring physics.
    */
   ringedGiantMode?: boolean;
+  /**
+   * Pulsar: an opt-in lighthouse neutron star — a tiny, brilliant core whose
+   * twin radiation beams sweep the sky on a slow arc and whose brightness
+   * pulses rhythmically each time a beam swings toward the centre. Pure
+   * atmosphere — never touches the stars or the spring physics.
+   */
+  pulsarMode?: boolean;
   /** Called with the live zoom whenever it changes, so the parent can share it. */
   onZoom?: (zoom: number) => void;
   /** Forwarded to the canvas element, so the parent can capture it (e.g. for a
@@ -393,6 +408,12 @@ export default function StarField({
     // this clock (cheap arithmetic) so it drifts smoothly, exactly like the
     // moon. Pure atmosphere — never touches the stars or the spring physics.
     let ringedGiantTime = 0;
+    // Pulsar: a running clock for the neutron star's slow sky-crossing drift and
+    // its lighthouse sweep. The whole state (position, beam direction, pulse) is
+    // recomputed each frame from this clock via `computePulsar` — cheap
+    // arithmetic — so the beam sweeps smoothly and the core flares in step.
+    let pulsarTime = 0;
+    let pulsar: PulsarState = {} as PulsarState;
 
     const resize = () => {
       dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
@@ -587,6 +608,13 @@ export default function StarField({
       // this same clock at draw time.
       if (ringedGiantMode) {
         ringedGiantTime += dt * 1000;
+      }
+
+      // Pulsar: advance the drift + sweep clock (ms). The sweep is brisk (a
+      // lighthouse), so under reduced-motion we freeze the clock and hold the
+      // beam where it was — the core still glows, it just does not strobe.
+      if (pulsarMode && !reduced) {
+        pulsarTime += dt * 1000;
       }
 
       const cx = w / 2;
@@ -1099,6 +1127,70 @@ export default function StarField({
         ctx.restore();
       }
 
+      // Pulsar: a lighthouse neutron star. A tiny, brilliant core sweeps twin
+      // radiation beams across the sky on a slow arc; each time a beam swings
+      // toward the centre of the screen the core flares (its `pulse`), so the
+      // read is a living, breathing beacon rather than a steady star. Painted
+      // with additive blending so the beams glow, and behind the stars like the
+      // other sky bodies. Pure atmosphere — never touches the spring physics.
+      if (pulsarMode) {
+        pulsar = computePulsar({ time: pulsarTime, width: w, height: h });
+        const px = pulsar.x;
+        const py = pulsar.y;
+        const core = pulsar.coreRadius * (1 + 0.5 * pulsar.pulse); // flares open on a pulse
+        const beamLen = Math.hypot(w, h) * PULSAR_BEAM_LENGTH_FRACTION;
+        const [beamN, beamS] = pulsar.beams;
+        const hue = hexToHue(pulsar.color);
+        // Additive so the two opposing beams and the core stack into a bright glow.
+        const prevOp = ctx.globalCompositeOperation;
+        ctx.globalCompositeOperation = "lighter";
+        for (const beam of [beamN, beamS]) {
+          const end = beamEndpoint(px, py, beam, beamLen);
+          const angle = Math.atan2(beam.y, beam.x);
+          const half = PULSAR_BEAM_HALF_ANGLE;
+          // A filled cone: from the core, fanning out by ±half, arcing to beamLen.
+          const x1 = px + beam.x * beamLen;
+          const y1 = py + beam.y * beamLen;
+          const x2 = px + beamLen * Math.cos(angle - half);
+          const y2 = py + beamLen * Math.sin(angle - half);
+          const x3 = px + beamLen * Math.cos(angle + half);
+          const y3 = py + beamLen * Math.sin(angle + half);
+          const grad = ctx.createLinearGradient(px, py, end.x, end.y);
+          // Bright and opaque at the core, fading to nothing at the beam's end.
+          grad.addColorStop(0, `hsla(${hue}, 90%, 75%, ${0.20 + 0.30 * pulsar.pulse})`);
+          grad.addColorStop(0.45, `hsla(${hue}, 90%, 70%, ${0.08 + 0.12 * pulsar.pulse})`);
+          grad.addColorStop(1, `hsla(${hue}, 90%, 70%, 0)`);
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.moveTo(px, py);
+          ctx.lineTo(x1, y1);
+          ctx.arc(px, py, beamLen, angle - half, angle + half);
+          ctx.closePath();
+          ctx.fill();
+        }
+        // The core: a hard, bright heart wrapped in a soft radial halo. On a
+        // pulse the halo swells and brightens, so the flare reads clearly.
+        const halo = ctx.createRadialGradient(px, py, 0, px, py, core * 9);
+        halo.addColorStop(0, `hsla(${hue}, 95%, 92%, ${0.55 + 0.45 * pulsar.pulse})`);
+        halo.addColorStop(0.15, `hsla(${hue}, 95%, 85%, ${0.35 + 0.4 * pulsar.pulse})`);
+        halo.addColorStop(0.5, `hsla(${hue}, 90%, 75%, ${0.10 * pulsar.pulse})`);
+        halo.addColorStop(1, `hsla(${hue}, 90%, 75%, 0)`);
+        ctx.fillStyle = halo;
+        ctx.beginPath();
+        ctx.arc(px, py, core * 9, 0, Math.PI * 2);
+        ctx.fill();
+        // The hot centre — near-white on a pulse, dimmer when the beam points away.
+        const heart = ctx.createRadialGradient(px, py, 0, px, py, core);
+        heart.addColorStop(0, `rgba(255,255,255,${0.85 + 0.15 * pulsar.pulse})`);
+        heart.addColorStop(0.6, `hsla(${hue}, 95%, 88%, ${0.7 + 0.3 * pulsar.pulse})`);
+        heart.addColorStop(1, `hsla(${hue}, 90%, 80%, 0)`);
+        ctx.fillStyle = heart;
+        ctx.beginPath();
+        ctx.arc(px, py, core, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalCompositeOperation = prevOp;
+      }
+
       for (const p of pulses) {
         // The ring only reaches radius == PULSE_WIDTH once fully grown, so while
         // it is young the inner radius (p.radius - PULSE_WIDTH) is negative and
@@ -1464,6 +1556,7 @@ export default function StarField({
     distantMode,
     blackHoleMode,
     ringedGiantMode,
+    pulsarMode,
     onZoom,
   ]);
 
