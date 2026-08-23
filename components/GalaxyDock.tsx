@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type React from "react";
 
 /**
@@ -84,6 +85,8 @@ export default function GalaxyDock({
   label,
   environment,
   share,
+  fullscreen = false,
+  onToggleFullscreen,
 }: {
   config: GalaxyConfig;
   gravity: boolean;
@@ -94,6 +97,11 @@ export default function GalaxyDock({
   environment?: EnvironmentToggle[];
   /** Optional “Share as an image” control, rendered next to Shuffle / Gravity. */
   share?: React.ReactNode;
+  /** Whether the galaxy is currently in fullscreen mode (for the button state). */
+  fullscreen?: boolean;
+  /** Called to toggle fullscreen mode. Always present (the fallback layout
+   * works even without the browser Fullscreen API). */
+  onToggleFullscreen?: () => void;
 }) {
   const inc = (k: keyof Omit<GalaxyConfig, "theme">) => (v: number) => {
     const { max } = RANGES[k];
@@ -103,6 +111,15 @@ export default function GalaxyDock({
     const { min } = RANGES[k];
     applyConfig({ [k]: Math.max(v - RANGES[k].step, min) });
   };
+
+  // In fullscreen mode the galaxy is the whole point, so the dock starts
+  // collapsed to a single row of primary controls. The visitor can still
+  // expand it to reach the environment/sky chips — the controls are never
+  // hidden, just collapsible. Collapsing is reset whenever fullscreen toggles.
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    setCollapsed(fullscreen);
+  }, [fullscreen]);
 
   return (
     <div className="absolute bottom-6 left-1/2 z-20 w-[min(680px,92vw)] -translate-x-1/2">
@@ -175,6 +192,15 @@ export default function GalaxyDock({
               🎲 Shuffle
             </button>
             <button
+              onClick={onToggleFullscreen}
+              title={fullscreen ? "Exit fullscreen (Esc)" : "Enter fullscreen (F)"}
+              aria-label={fullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+              aria-pressed={fullscreen}
+              className="rounded-full px-3 py-1 font-medium text-white/80 transition-colors hover:bg-white/15 hover:text-white"
+            >
+              {fullscreen ? "✕ Fullscreen" : "⛶ Fullscreen"}
+            </button>
+            <button
               onClick={toggleGravity}
               aria-pressed={gravity}
               className={`relative rounded-full px-3 py-1 font-medium transition-colors ${
@@ -189,8 +215,20 @@ export default function GalaxyDock({
 
         {/* Environment/sky toggles — a single, wrap-friendly row of compact
             chips. Kept in the same dock (not a second floating overlay) so the
-            controls never collide or spill off the edges on narrow screens. */}
-        {environment && environment.length > 0 && (
+            controls never collide or spill off the edges on narrow screens.
+
+            In fullscreen mode the dock starts collapsed (see `collapsed` above)
+            so the galaxy stays front-and-centre; a single link expands the row
+            back out. The controls are never hidden — just collapsible. */}
+        {environment && environment.length > 0 && collapsed && (
+          <button
+            onClick={() => setCollapsed(false)}
+            className="mx-auto mt-1 rounded-full border border-white/15 px-3 py-1 text-xs font-medium text-white/60 transition-colors hover:bg-white/15 hover:text-white/90"
+          >
+            ▸ Show galaxy features
+          </button>
+        )}
+        {environment && environment.length > 0 && !collapsed && (
           <div className="flex flex-wrap items-center gap-2">
             {environment.map((t) => (
               <button
@@ -207,6 +245,15 @@ export default function GalaxyDock({
                 {t.label}: {t.active ? "On" : "Off"}
               </button>
             ))}
+            {fullscreen && (
+              <button
+                onClick={() => setCollapsed(true)}
+                className="rounded-full border border-white/15 px-3 py-1 text-xs font-medium text-white/50 transition-colors hover:bg-white/15 hover:text-white/80"
+                title="Collapse the feature list back to primary controls"
+              >
+                ◂ Hide features
+              </button>
+            )}
           </div>
         )}
         </div>

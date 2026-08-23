@@ -4,6 +4,29 @@ All notable changes to **Pinwheel Galaxy** are documented here. This project
 follows [Keep a Changelog](https://keepachangelog.com) conventions, plus a
 "Shipped" section for ongoing autonomous evolution.
 
+## [0.19.0] — 2026-08-24
+
+### Added
+
+- **Fullscreen Galaxy** — expand the interactive hero starfield to fill the
+  whole viewport and return to the normal hero layout with one click. A new
+  **Fullscreen** button (⛶ / ✕) in the bottom control bar requests the browser
+  Fullscreen API, with a graceful fallback chrome-less expanded layout where the
+  API is unavailable. The hero's title overlay hides while fullscreen and the
+  environment chips collapse to a single "Show galaxy features" toggle so the
+  galaxy reads as a clean backdrop. Toggle with the button, the **`f`** keyboard
+  shortcut, or **Esc**. Entering writes `?fullscreen=on` into the URL, so a
+  shared link (or reloading with `?fullscreen=on`) starts already in fullscreen.
+  Off by default and purely additive — the default galaxy is unchanged.
+  - `lib/fullscreen.ts` (new) + `lib/fullscreen.test.ts` (7 tests).
+  - `components/GalaxyDock.tsx` — Fullscreen button and collapsible environment
+    row.
+  - `app/page.tsx` — fullscreen state, enter/exit (API + fallback), `f`
+    shortcut, Escape handling, `?fullscreen=on` deep-linking, and the
+    chrome-less expanded hero layout. Browser API availability is checked lazily
+    (never during render) so hydration stays clean.
+  - `docs/features/fullscreen.md` (new). Full test count: 161/161.
+
 ## [0.18.0] — 2026-08-23
 
 ### Added
