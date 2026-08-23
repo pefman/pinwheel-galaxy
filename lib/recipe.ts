@@ -32,6 +32,9 @@ export interface GalaxyRecipe {
   /** Supernova: an opt-in rare event — a background star that explodes into a
    * flash that fades to a faint remnant. */
   supernova: boolean;
+  /** Distant Galaxy: an opt-in far-away spiral galaxy slowly rotating in the
+   * deep background. */
+  distant: boolean;
 }
 
 export const DEFAULT_RECIPE: GalaxyRecipe = {
@@ -45,6 +48,7 @@ export const DEFAULT_RECIPE: GalaxyRecipe = {
   aurora: false,
   moon: false,
   supernova: false,
+  distant: false,
 };
 
 /** The URL param name for each layer, in a stable display order. */
@@ -59,6 +63,7 @@ export const RECIPE_PARAMS = {
   aurora: "aurora",
   moon: "moon",
   supernova: "supernova",
+  distant: "distant",
 } as const;
 
 /** Read one boolean layer param; missing / non-"on" values are `false`. */
@@ -83,6 +88,7 @@ export function parseRecipe(params: URLSearchParams): GalaxyRecipe {
     aurora: parseLayer(params, RECIPE_PARAMS.aurora),
     moon: parseLayer(params, RECIPE_PARAMS.moon),
     supernova: parseLayer(params, RECIPE_PARAMS.supernova),
+    distant: parseLayer(params, RECIPE_PARAMS.distant),
   };
 }
 
@@ -103,6 +109,7 @@ export function recipeToParams(recipe: Partial<GalaxyRecipe>): URLSearchParams {
   if (recipe.aurora) p.set(RECIPE_PARAMS.aurora, "on");
   if (recipe.moon) p.set(RECIPE_PARAMS.moon, "on");
   if (recipe.supernova) p.set(RECIPE_PARAMS.supernova, "on");
+  if (recipe.distant) p.set(RECIPE_PARAMS.distant, "on");
   return p;
 }
 
@@ -123,6 +130,7 @@ export function resolveRecipe(partial: Partial<GalaxyRecipe>): GalaxyRecipe {
     aurora: partial.aurora ?? DEFAULT_RECIPE.aurora,
     moon: partial.moon ?? DEFAULT_RECIPE.moon,
     supernova: partial.supernova ?? DEFAULT_RECIPE.supernova,
+    distant: partial.distant ?? DEFAULT_RECIPE.distant,
   };
 }
 
@@ -153,6 +161,7 @@ export function describeRecipe(recipe: GalaxyRecipe): string {
     on("Aurora", recipe.aurora),
     on("Moon", recipe.moon),
     on("Supernovae", recipe.supernova),
+    on("Distant Galaxy", recipe.distant),
   ].filter(Boolean) as string[];
   return parts.length ? parts.join(", ") : "Default galaxy";
 }

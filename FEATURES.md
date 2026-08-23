@@ -5,6 +5,75 @@ additive and dated. New features are added here every evolution cycle.
 
 ---
 
+## Distant Galaxy — a Far-Away Spiral in the Deep Background
+
+- **Date added:** 2026-08-23
+- **Version:** 0.17.0
+- **Status:** Shipped & live on Vercel — https://pinwheel-galaxy.vercel.app
+
+### What + why
+
+Every other sky layer is either a field of stars, a soft continuous glow/motion
+(nebula, aurora, meteors) or a single body/event (the moon, a supernova). A
+**distant galaxy** is something different: a whole *other* galaxy, seen at a
+tilted inclination in the deep background, made of a dense field of faint stars
+wound into spiral arms around a warm central bulge. It reads as looking out
+into deep space *past* the interactive galaxy you are making — distant scenery
+rather than the thing you are making — so it sits behind everything and rotates
+only a hair over a session. It is off by default, purely additive, and distinct
+from the interactive foreground galaxy.
+
+### How it works (high-level)
+
+- `lib/distantGalaxy.ts` (new) holds the **pure** logic, unit-tested
+  (`lib/distantGalaxy.test.ts`, 10 tests). `armPoint` walks a logarithmic
+  spiral arm — the radius grows linearly with the normalised radius `u` while
+  the angle winds by `turns` full rotations — and `buildDistantGalaxyField`
+  fans stars along `arms` such arms (with perpendicular scatter for arm
+  thickness) and clusters warm bulge stars near the core. `computeDistantGalaxy`
+  picks a seeded placement (off-centre, kept clear of the interactive galaxy and
+  padded from the edges), a small distant radius, an arm count (2–5), an
+  inclination `tilt` and a base rotation, returning a ready-to-draw
+  `DistantGalaxy` with its pre-computed star field.
+- `components/StarField.tsx` gained an opt-in `distantMode` prop: the galaxy is
+  built once in `resize()` (so it keeps its shape across resizes) and only its
+  global rotation advances on a slow clock (one turn per ~260 s). Each frame it
+  paints a warm central bulge glow plus the field of faint stars, rotated and
+  Y-compressed (`cos(tilt)`) into an oblique view, at screen scale and outside
+  the galaxy's zoom transform so it stays far away while you zoom.
+- `lib/recipe.ts` gained a shareable `?distant=` layer toggle (off by default)
+  and it is surfaced in `describeRecipe`.
+- `app/page.tsx` wires `distantMode={recipe.distant}` and adds a **Distant
+  Galaxy** chip to the Galaxy Dock's environment row.
+
+### Key files / components
+
+- `lib/distantGalaxy.ts` (new) and `lib/distantGalaxy.test.ts` (new, 10 tests).
+- `components/StarField.tsx` — new `distantMode` prop, the built-once field, the
+  slow rotation clock, the bulge glow and the rotated + tilted star field.
+- `lib/recipe.ts` — the shareable `?distant=` layer toggle.
+- `app/page.tsx` — the **Distant Galaxy** toggle chip.
+
+### User-facing behavior
+
+1. `npm install` then `npm run build` and `npm start` (or `npm run dev`).
+2. Open the site. In the hero dock, click **Distant Galaxy: Off** → **On**.
+3. A tilted spiral galaxy appears in the deep background (top-left region),
+   slowly turning. Toggle it Off to return to a calm sky.
+4. Open `?distant=on` to pre-enable it; the URL re-hydrates the exact galaxy.
+5. Turn on `prefers-reduced-motion` — the galaxy is essentially static, so it
+   degrades to a calm tilted spiral with no motion.
+
+### Known limitations / follow-ups
+
+- The field is a fixed star count (`ARM_SAMPLES` per arm + `BULGE_STARS`),
+  so enabling it roughly doubles the per-frame star draw while on. Fine for a
+  background layer; could scale with viewport or cap at large sizes.
+- Placement is a single galaxy per session; a future cycle could seed a few
+  fainter smudges (distant galaxies) across the sky.
+
+---
+
 ## Supernova — a Star That Quietly Lives, Then Explodes
 
 - **Date added:** 2026-08-22
