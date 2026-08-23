@@ -129,6 +129,7 @@ export default function Home() {
           auroraMode={recipe.aurora}
           moonMode={recipe.moon}
           supernovaMode={recipe.supernova}
+          distantMode={recipe.distant}
           onZoom={setZoom}
           canvasRef={(el) => {
             canvasRef.current = el;
@@ -205,6 +206,12 @@ export default function Home() {
               active: recipe.supernova,
               onToggle: () => toggle("supernova"),
               color: "rgba(150,190,255,0.9)",
+            },
+            {
+              label: "Distant Galaxy",
+              active: recipe.distant,
+              onToggle: () => toggle("distant"),
+              color: "rgba(180,150,255,0.85)",
             },
           ]}
         />

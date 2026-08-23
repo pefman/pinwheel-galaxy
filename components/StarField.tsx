@@ -75,6 +75,11 @@ import {
   type MoonState,
 } from "@/lib/moon";
 import { computeSupernova } from "@/lib/supernova";
+import {
+  ROTATION_SECONDS_PER_TURN,
+  computeDistantGalaxy,
+  type DistantGalaxy,
+} from "@/lib/distantGalaxy";
 
 const SPRING_K = 0.02; // how strongly stars return to their orbit
 const DAMPING = 0.86; // velocity damping per frame
@@ -201,6 +206,7 @@ export default function StarField({
   auroraMode = false,
   moonMode = false,
   supernovaMode = false,
+  distantMode = false,
   onZoom,
   canvasRef,
 }: {
@@ -231,6 +237,11 @@ export default function StarField({
    * faint remnant. Pure atmosphere — never touches the stars.
    */
   supernovaMode?: boolean;
+  /**
+   * Distant Galaxy: an opt-in far-away spiral galaxy slowly rotating in the
+   * deep background. Pure atmosphere — never touches the stars.
+   */
+  distantMode?: boolean;
   /** Called with the live zoom whenever it changes, so the parent can share it. */
   onZoom?: (zoom: number) => void;
   /** Forwarded to the canvas element, so the parent can capture it (e.g. for a
@@ -310,6 +321,11 @@ export default function StarField({
     // each frame from this clock via `computeSupernova` — cheap arithmetic, so
     // the flash and its expanding shockwave read as smooth rather than jittery.
     let supernovaTime = 0;
+    // Distant Galaxy: a running clock for the galaxy's slow rotation. Its star
+    // field is built once (in `resize()`) and never re-randomises between
+    // frames; only the global rotation advances on this clock.
+    let distantGalaxyTime = 0;
+    let distant: DistantGalaxy | null = null;
 
     const resize = () => {
       dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
@@ -344,6 +360,14 @@ export default function StarField({
         });
       } else {
         auroraBands = [];
+      }
+      // Distant Galaxy: (re)build the star field for the current sky size when
+      // the layer is on; clear it when off. Pure function of size + seed, so it
+      // keeps its shape across resizes.
+      if (distantMode) {
+        distant = computeDistantGalaxy({ width: w, height: h });
+      } else {
+        distant = null;
       }
     };
 
@@ -425,6 +449,13 @@ export default function StarField({
       // Supernova: advance the explosion schedule clock (ms), matching the moon's.
       if (supernovaMode) {
         supernovaTime += dt * 1000;
+      }
+
+      // Distant Galaxy: advance the slow rotation clock (seconds). The field is
+      // static; only the global angle turns, very slowly, so it reads as a
+      // distant, essentially-frozen backdrop.
+      if (distantMode) {
+        distantGalaxyTime += dt;
       }
 
       const cx = w / 2;
@@ -801,6 +832,53 @@ export default function StarField({
           ctx.fill();
         }
       }
+      // Distant Galaxy: a far-away spiral galaxy slowly rotating in the deep
+      // background. Built once (see resize()) and only its global angle turns,
+      // very slowly, so it reads as essentially-frozen deep-field scenery behind
+      // the interactive galaxy. Pure atmosphere — never touches the stars, and it
+      // is drawn at screen scale (not the galaxy's zoom transform) so it stays
+      // far away while you zoom the near galaxy.
+      if (distant && distantMode) {
+        const g = distant;
+        const cosTilt = Math.cos(g.tilt);
+        const rot = g.angle + (distantGalaxyTime / ROTATION_SECONDS_PER_TURN) * Math.PI * 2;
+        const rotCos = Math.cos(rot);
+        const rotSin = Math.sin(rot);
+        // A warm central bulge glow gives the galaxy a soft luminous core.
+        const bulge = ctx.createRadialGradient(g.x, g.y, 0, g.x, g.y, g.radius * 0.6);
+        bulge.addColorStop(0, "hsla(40, 60%, 90%, 0.30)");
+        bulge.addColorStop(0.5, "hsla(38, 55%, 82%, 0.13)");
+        bulge.addColorStop(1, "hsla(36, 50%, 80%, 0)");
+        ctx.fillStyle = bulge;
+        ctx.beginPath();
+        ctx.arc(g.x, g.y, g.radius * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+        // The field of faint stars, rotated + tilted into an oblique view.
+        ctx.save();
+        for (const s of g.stars) {
+          // Inclination: squash one axis so a tilted galaxy reads as oblique.
+          const lx = s.dx;
+          const ly = s.dy * cosTilt;
+          // Apply the slow global rotation.
+          const rx = lx * rotCos - ly * rotSin;
+          const ry = lx * rotSin + ly * rotCos;
+          const px = g.x + rx;
+          const py = g.y + ry;
+          const alpha = 0.42 + 0.45 * s.bright;
+          ctx.fillStyle = `hsla(${s.hue}, 45%, ${58 + 32 * s.bright}%, ${alpha})`;
+          ctx.beginPath();
+          ctx.arc(
+            px,
+            py,
+            Math.max(0.4, s.size * (0.8 + 0.15 * s.bright)),
+            0,
+            Math.PI * 2,
+          );
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
       for (const p of pulses) {
         // The ring only reaches radius == PULSE_WIDTH once fully grown, so while
         // it is young the inner radius (p.radius - PULSE_WIDTH) is negative and
@@ -1064,6 +1142,7 @@ export default function StarField({
     auroraMode,
     moonMode,
     supernovaMode,
+    distantMode,
     onZoom,
   ]);
 
