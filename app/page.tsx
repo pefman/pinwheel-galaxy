@@ -232,6 +232,7 @@ export default function Home() {
         ].join(" ")}
       >
         <StarField
+          config={config}
           active={gravity}
           constellation={recipe.constellation}
           nebula={recipe.nebula}

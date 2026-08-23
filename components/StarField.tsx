@@ -1313,6 +1313,7 @@ export default function StarField({
     active,
     reduced,
     config,
+    constellation,
     nebula,
     shooting,
     zoomEnabled,
