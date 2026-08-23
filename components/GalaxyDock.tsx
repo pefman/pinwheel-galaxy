@@ -121,8 +121,11 @@ export default function GalaxyDock({
     setCollapsed(fullscreen);
   }, [fullscreen]);
 
+  // `data-galaxy-ui` marks this control surface so the interactive starfield
+  // knows to ignore pointer events (gravity follow, click ripples, zoom,
+  // double-click) that land on the dock instead of the galaxy itself.
   return (
-    <div className="absolute bottom-6 left-1/2 z-20 w-[min(680px,92vw)] -translate-x-1/2">
+    <div className="absolute bottom-6 left-1/2 z-20 w-[min(680px,92vw)] -translate-x-1/2" data-galaxy-ui>
       <div className="glass max-h-[70vh] overflow-x-auto rounded-2xl px-3 py-3 text-sm sm:px-5">
         <p className="mb-2 flex items-center justify-between px-1 text-[11px] font-medium uppercase tracking-widest text-white/45">
           <span>Galaxy controls</span>

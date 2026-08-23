@@ -467,7 +467,18 @@ export default function StarField({
       }
     };
 
+    // The control dock (and any other element marked with `data-galaxy-ui`) is
+    // a UI overlay, not part of the galaxy. Pointer events that land on it —
+    // a toggle click, a hover over the glass bar — must NOT also drive the
+    // starfield. The galaxy's interaction listeners live on `window`, so they
+    // would otherwise fire for every dock click (adding a ripple, moving the
+    // gravity well, zooming). Skip those events by checking the target.
+    const overGalaxyUI = (e: Event) => {
+      const ui = document.querySelector<HTMLElement>("[data-galaxy-ui]");
+      return !!ui && ui.contains(e.target as Node | null);
+    };
     const onMove = (e: MouseEvent) => {
+      if (overGalaxyUI(e)) return;
       mouse.x = e.clientX;
       mouse.y = e.clientY;
       mouse.active = true;
@@ -478,6 +489,7 @@ export default function StarField({
       mouse.y = -9999;
     };
     const onClick = (e: MouseEvent) => {
+      if (overGalaxyUI(e)) return;
       pulses.push({ x: e.clientX, y: e.clientY, radius: 0, life: 1 });
     };
     const onTouch = (e: TouchEvent) => {
@@ -537,6 +549,7 @@ export default function StarField({
 
     // Galaxy Zoom: wheel / trackpad scroll zooms in and out, clamped and eased.
     const onWheel = (e: WheelEvent) => {
+      if (overGalaxyUI(e)) return;
       if (!zoomEnabled) return;
       // Prevent the page from scrolling while zooming with the wheel.
       e.preventDefault();
