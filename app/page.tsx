@@ -247,6 +247,7 @@ export default function Home() {
           blackHoleMode={recipe.blackHole}
           ringedGiantMode={recipe.ringedGiant}
           pulsarMode={recipe.pulsar}
+          voyagerMode={recipe.voyager}
           onZoom={setZoom}
           canvasRef={(el) => {
             canvasRef.current = el;
@@ -353,6 +354,12 @@ export default function Home() {
               active: recipe.pulsar,
               onToggle: () => toggle("pulsar"),
               color: "rgba(143,227,255,0.9)",
+            },
+            {
+              label: "Comet Voyager",
+              active: recipe.voyager,
+              onToggle: () => toggle("voyager"),
+              color: "rgba(103,232,249,0.9)",
             },
           ]}
         />

@@ -73,7 +73,8 @@ test("the default recipe (no layers) matches the shipped default galaxy", () => 
   // We just assert the shape round-trips through resolveRecipe semantics:
   const { recipe } = galaxyOfDay(D1);
   for (const key of Object.keys(DEFAULT_RECIPE)) {
-    assert.equal(typeof recipe[key], typeof DEFAULT_RECIPE[key]);
+    const k = key as keyof GalaxyRecipe;
+    assert.equal(typeof recipe[k], typeof DEFAULT_RECIPE[k]);
   }
 });
 

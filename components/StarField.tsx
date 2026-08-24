@@ -104,6 +104,10 @@ import {
   isInsideEventHorizon,
   type BlackHoleState,
 } from "@/lib/blackHole";
+import {
+  computeVoyager,
+  VOYAGER_SPEED_FULL_PX_S,
+} from "@/lib/cometVoyager";
 
 const SPRING_K = 0.02; // how strongly stars return to their orbit
 const DAMPING = 0.86; // velocity damping per frame
@@ -257,6 +261,7 @@ export default function StarField({
   blackHoleMode = false,
   ringedGiantMode = false,
   pulsarMode = false,
+  voyagerMode = false,
   onZoom,
   canvasRef,
 }: {
@@ -311,6 +316,14 @@ export default function StarField({
    * atmosphere — never touches the stars or the spring physics.
    */
   pulsarMode?: boolean;
+  /**
+   * Comet Voyager: an opt-in wandering comet — a lone, autonomous visitor
+   * that arrives on its own clock, arcs across the sky with a tapering,
+   * glowing tail, and departs. Unlike the pointer's Comet Trail it needs no
+   * input at all. When the gravity well is live its path bends toward the
+   * cursor. Pure atmosphere — never touches the stars or the spring physics.
+   */
+  voyagerMode?: boolean;
   /** Called with the live zoom whenever it changes, so the parent can share it. */
   onZoom?: (zoom: number) => void;
   /** Forwarded to the canvas element, so the parent can capture it (e.g. for a
@@ -414,6 +427,12 @@ export default function StarField({
     // arithmetic — so the beam sweeps smoothly and the core flares in step.
     let pulsarTime = 0;
     let pulsar: PulsarState = {} as PulsarState;
+    // Comet Voyager: a running clock for the comet's arrival cycle. Its whole
+    // state (in flight? head, tail, speed) is recomputed each frame from this
+    // clock via `computeVoyager` — cheap arithmetic — so the comet arrives,
+    // arcs and departs smoothly between frames. Under reduced motion the
+    // clock stays frozen, so the comet simply does not visit.
+    let voyagerTime = 0;
 
     const resize = () => {
       dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
@@ -628,6 +647,12 @@ export default function StarField({
       // beam where it was — the core still glows, it just does not strobe.
       if (pulsarMode && !reduced) {
         pulsarTime += dt * 1000;
+      }
+      // Comet Voyager: advance the arrival clock (ms). The flight is a pure
+      // function of this clock, so the comet arcs smoothly between frames.
+      // Paused under reduced motion (the comet does not visit).
+      if (voyagerMode && !reduced) {
+        voyagerTime += dt * 1000;
       }
 
       const cx = w / 2;
@@ -1427,6 +1452,74 @@ export default function StarField({
         }
       }
 
+      // Comet Voyager: a lone, autonomous comet that arrives on its own clock
+      // and arcs across the sky with a tapering, glowing tail (its true
+      // trail, re-sampled from the same pure path). Drawn *after* the zoom
+      // transform, in front of the stars, like the pointer's comet trail —
+      // the tail grows with the comet's speed and its hues come from the
+      // active theme. When the gravity well is live the path bends toward it
+      // (a capped slingshot attraction). Pure atmosphere — never touches the
+      // stars or the spring physics.
+      if (voyagerMode) {
+        const v = computeVoyager({
+          time: voyagerTime,
+          width: w,
+          height: h,
+          well:
+            active && !reduced && mouse.active
+              ? { x: mouse.x, y: mouse.y }
+              : null,
+        });
+        if (v.inFlight) {
+          const hueA = hues[0] ?? 200;
+          const hueB = hues[1] ?? hues[0] ?? 240;
+          const speed01 = Math.min(1, v.speed / VOYAGER_SPEED_FULL_PX_S);
+          const grow = 0.8 + speed01 * 0.9;
+          const prevOp = ctx.globalCompositeOperation;
+          ctx.globalCompositeOperation = "lighter";
+          // Tapered tail: thick and bright at the head, thin and faint at the
+          // tip. Hue drifts from the theme's primary to secondary along it.
+          ctx.lineCap = "round";
+          const tail = v.tail;
+          for (let i = 0; i < tail.length - 1; i++) {
+            const p0 = tail[i];
+            const p1 = tail[i + 1];
+            const t = (i + 1) / Math.max(1, tail.length - 1); // 0 head → 1 tip
+            const wdt = Math.max(0.5, lerp(7.5, 0.8, t) * grow);
+            const hue = lerp(hueA, hueB, t);
+            const alpha = Math.pow(1 - t, 2) * (0.45 + 0.45 * speed01);
+            const grad = ctx.createLinearGradient(p0.x, p0.y, p1.x, p1.y);
+            grad.addColorStop(0, `hsla(${hue}, 92%, ${72 + (1 - t) * 20}%, ${alpha})`);
+            grad.addColorStop(1, `hsla(${hue}, 88%, 62%, ${alpha * 0.25})`);
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = wdt;
+            ctx.beginPath();
+            ctx.moveTo(p0.x, p0.y);
+            ctx.lineTo(p1.x, p1.y);
+            ctx.stroke();
+          }
+          // Soft outer halo around the head.
+          const haloR = 34 * grow;
+          const halo = ctx.createRadialGradient(v.x, v.y, 0, v.x, v.y, haloR);
+          halo.addColorStop(0, `hsla(${hueA}, 90%, 82%, 0.4)`);
+          halo.addColorStop(1, `hsla(${hueA}, 90%, 70%, 0)`);
+          ctx.fillStyle = halo;
+          ctx.beginPath();
+          ctx.arc(v.x, v.y, haloR, 0, Math.PI * 2);
+          ctx.fill();
+          // Bright hot core.
+          const coreR = 10 * grow;
+          const core = ctx.createRadialGradient(v.x, v.y, 0, v.x, v.y, coreR);
+          core.addColorStop(0, `hsla(${hueA}, 100%, 97%, 0.95)`);
+          core.addColorStop(1, `hsla(${hueA}, 90%, 80%, 0)`);
+          ctx.fillStyle = core;
+          ctx.beginPath();
+          ctx.arc(v.x, v.y, coreR, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalCompositeOperation = prevOp;
+        }
+      }
+
       // Black Hole: a placeable singularity with an accretion disk, photon
       // ring and event horizon, drawn at the very end (screen scale, on top of
       // the stars) so the opaque horizon hides whatever sits behind it. The
@@ -1570,6 +1663,7 @@ export default function StarField({
     blackHoleMode,
     ringedGiantMode,
     pulsarMode,
+    voyagerMode,
     onZoom,
   ]);
 

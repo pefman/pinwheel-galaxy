@@ -4,6 +4,38 @@ All notable changes to **Pinwheel Galaxy** are documented here. This project
 follows [Keep a Changelog](https://keepachangelog.com) conventions, plus a
 "Shipped" section for ongoing autonomous evolution.
 
+## [0.22.0] — 2026-07-20
+
+### Added
+
+- **Comet Voyager** — a wandering comet: a lone, autonomous visitor that arrives on its own
+  clock, arcs across the sky with a tapering, glowing tail, rushes at its closest approach,
+  and departs. Unlike the pointer's Comet Trail it needs no input at all; when the gravity
+  well is live the flight's path bends toward the cursor (a capped slingshot attraction).
+  - `lib/cometVoyager.ts` (new) — the pure, deterministic module. A seeded PRNG (seed +
+    cycle index) schedules one flight per ~12 s cycle: spawn edge, exit edge, arc bend and
+    duration are all derived from the seed, so every visitor is stable frame-to-frame and
+    identical on every device, and different visitors differ. The flight follows a quadratic
+    Bézier with cosine easing (a perihelion rush — slow approach, fast middle, gentle exit),
+    the tail is the comet's true trail (the same path re-sampled at earlier times), and an
+    optional gravity well displaces the path toward the cursor by a capped, softened amount
+    (max 90 px, strength 16000 px², softening 150 px). The first cycle is biased so a comet
+    arrives within ~2 s of enabling the layer.
+  - `lib/cometVoyager.test.ts` (new, 12 tests) — determinism, per-seed variance, the
+    first-flight grace window, visitor-not-resident, head-bounds, progress 0…1, the tail as a
+    bounded trail anchored at the head, tail growth through the flight, speed, gravity-well
+    bending within the cap, well/null equivalence, and the default seed.
+  - `lib/recipe.ts` — `voyager` layer (default off), `?voyager=on` URL binding and a
+    "Comet Voyager" entry in the recipe description.
+  - `components/StarField.tsx` — `voyagerMode` prop + its own clock, and a draw pass that
+    paints the tapered, theme-hued tail (bright at the head, fading to the tip) plus a soft
+    halo and hot core in front of the stars. The clock is frozen under reduced motion, so
+    the comet does not visit. Purely additive — it never touches the stars or their physics.
+  - `app/page.tsx` — the **Comet Voyager** dock chip (Environment group), wired to the
+    recipe toggle; the StarField prop is passed through from the recipe.
+  - Off by default; toggle it in the dock or via `?voyager=on`. Tail and head hues come
+    from the active theme. Test count: 193/193.
+
 ## [0.21.0] — 2026-08-24
 
 ### Added

@@ -45,6 +45,10 @@ export interface GalaxyRecipe {
   /** Pulsar: an opt-in lighthouse neutron star — a tiny, brilliant core whose
    * twin beams sweep the sky and whose brightness pulses on its own rhythm. */
   pulsar: boolean;
+  /** Comet Voyager: an opt-in wandering comet — a lone, autonomous visitor
+   * that arrives on its own clock, arcs across the sky with a glowing tail,
+   * and departs. */
+  voyager: boolean;
 }
 
 export const DEFAULT_RECIPE: GalaxyRecipe = {
@@ -62,6 +66,7 @@ export const DEFAULT_RECIPE: GalaxyRecipe = {
   blackHole: false,
   ringedGiant: false,
   pulsar: false,
+  voyager: false,
 };
 
 /** The URL param name for each layer, in a stable display order. */
@@ -80,6 +85,7 @@ export const RECIPE_PARAMS = {
   blackHole: "blackHole",
   ringedGiant: "ringedGiant",
   pulsar: "pulsar",
+  voyager: "voyager",
 } as const;
 
 /** Read one boolean layer param; missing / non-"on" values are `false`. */
@@ -108,6 +114,7 @@ export function parseRecipe(params: URLSearchParams): GalaxyRecipe {
     blackHole: parseLayer(params, RECIPE_PARAMS.blackHole),
     ringedGiant: parseLayer(params, RECIPE_PARAMS.ringedGiant),
     pulsar: parseLayer(params, RECIPE_PARAMS.pulsar),
+    voyager: parseLayer(params, RECIPE_PARAMS.voyager),
   };
 }
 
@@ -132,6 +139,7 @@ export function recipeToParams(recipe: Partial<GalaxyRecipe>): URLSearchParams {
   if (recipe.blackHole) p.set(RECIPE_PARAMS.blackHole, "on");
   if (recipe.ringedGiant) p.set(RECIPE_PARAMS.ringedGiant, "on");
   if (recipe.pulsar) p.set(RECIPE_PARAMS.pulsar, "on");
+  if (recipe.voyager) p.set(RECIPE_PARAMS.voyager, "on");
   return p;
 }
 
@@ -156,6 +164,7 @@ export function resolveRecipe(partial: Partial<GalaxyRecipe>): GalaxyRecipe {
     blackHole: partial.blackHole ?? DEFAULT_RECIPE.blackHole,
     ringedGiant: partial.ringedGiant ?? DEFAULT_RECIPE.ringedGiant,
     pulsar: partial.pulsar ?? DEFAULT_RECIPE.pulsar,
+    voyager: partial.voyager ?? DEFAULT_RECIPE.voyager,
   };
 }
 
@@ -190,6 +199,7 @@ export function describeRecipe(recipe: GalaxyRecipe): string {
     on("Black Hole", recipe.blackHole),
     on("Ringed Giant", recipe.ringedGiant),
     on("Pulsar", recipe.pulsar),
+    on("Comet Voyager", recipe.voyager),
   ].filter(Boolean) as string[];
   return parts.length ? parts.join(", ") : "Default galaxy";
 }

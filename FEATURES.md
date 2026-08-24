@@ -5,6 +5,44 @@ additive and dated. New features are added here every evolution cycle.
 
 ---
 
+## Comet Voyager — a Wandering Comet
+
+- **Date added:** 2026-07-20
+- **Version:** 0.22.0
+- **Status:** Shipped & live on Vercel — https://pinwheel-galaxy.vercel.app
+
+### What + why
+
+A lone, autonomous comet that visits the galaxy on its own clock. Roughly every ~12 seconds a
+new visitor arrives from a random screen edge, arcs across the sky on a graceful curve with a
+tapering, glowing tail, rushes at its closest approach, and departs — like a real long-period
+comet's brief perihelion pass. It needs no input at all: the sky keeps its own life even when
+the pointer is still. When the gravity well (the cursor) is live, the comet's path bends gently
+toward it — a capped slingshot attraction, so the well visibly *pulls* the visitor off course.
+Unlike the existing **Comet Trail** (which trails the pointer), the Voyager flies by itself.
+
+### How it works (high-level)
+
+- **Pure, deterministic scheduler** (`lib/cometVoyager.ts`): the whole comet is a pure function
+  of `(time, size, well)`. A seeded PRNG (seed + cycle index) decides each flight's spawn edge,
+  exit edge, arc bend, and duration — so every visitor's path is stable frame-to-frame and
+  identical on every device, and different visitors differ.
+- **Perihelion rush**: the flight follows a quadratic Bézier from spawn to exit, parameterised
+  by a cosine-eased progress — slow approach, a fast sweep through the middle, a gentle exit.
+- **True tail**: the tail is the comet's *actual trail* — the same pure path re-sampled at
+  slightly earlier times, so it always traces where the comet really was. Its width and glow
+  grow with the comet's speed.
+- **Gravity slingshot**: when the cursor is a live well, the head (and its tail) are displaced
+  toward it by a capped, softening-deflection force — a visible pull that never captures the
+  visitor.
+- **Reduced motion**: the arrival clock is frozen, so the comet simply does not visit — no
+  movement at all.
+- **Opt-in layer**: off by default; toggle it in the dock ("Comet Voyager") or via `?voyager=on`.
+  Tail and head hues come from the active theme. Purely additive — it paints a comet in front
+  of the stars and never touches their physics.
+
+---
+
 ## Pulsar — a Lighthouse Neutron Star
 
 - **Date added:** 2026-08-24
