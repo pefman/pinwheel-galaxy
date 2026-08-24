@@ -510,8 +510,11 @@ export default function StarField({
     // would otherwise fire for every dock click (adding a ripple, moving the
     // gravity well, zooming). Skip those events by checking the target.
     const overGalaxyUI = (e: Event) => {
-      const ui = document.querySelector<HTMLElement>("[data-galaxy-ui]");
-      return !!ui && ui.contains(e.target as Node | null);
+      // `closest` walks up from the event's target, so it respects *every*
+      // marked surface (a querySelector for the first match would miss any
+      // future second UI element carrying the attribute).
+      const target = e.target;
+      return target instanceof Element && target.closest("[data-galaxy-ui]") !== null;
     };
     const onMove = (e: MouseEvent) => {
       if (overGalaxyUI(e)) return;
@@ -615,7 +618,10 @@ export default function StarField({
       if (now - lastTap < 300) targetZoom = ZOOM_DEFAULT;
       lastTap = now;
     };
-    const onDoubleClick = () => {
+    const onDoubleClick = (e: MouseEvent) => {
+      // Toggling a dock feature on and off is two quick clicks — a double-
+      // click. Without this guard it would also reset the galaxy's zoom.
+      if (overGalaxyUI(e)) return;
       targetZoom = ZOOM_DEFAULT;
     };
 
