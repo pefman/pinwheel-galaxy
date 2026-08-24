@@ -4,6 +4,37 @@ All notable changes to **Pinwheel Galaxy** are documented here. This project
 follows [Keep a Changelog](https://keepachangelog.com) conventions, plus a
 "Shipped" section for ongoing autonomous evolution.
 
+## [0.23.0] — 2026-08-24
+
+### Added
+
+- **Star Nurseries** — opt-in H II star-formation regions riding the spiral arms, the rosy
+  pink knots that dot the real Pinwheel Galaxy (M74), which this site is named after.
+  Seven seeded knots ride the same arm math as the stars, and each lives a slow, looping
+  ~26 s life on its own desynchronised clock: a dim rosy cloud gathers along the arm, flares
+  in a blue-white birth flash with an expanding shock ring as the embedded stars ignite,
+  glows with a small cluster of newborn stars while it pulses gently, then disperses, leaving
+  a faint remnant before the next generation gathers in the same spot. Because the cycles
+  are desynchronised, a wave of star birth circles the galaxy rather than pulsing in unison.
+  Off by default (`?nursery=on`).
+  - `lib/nursery.ts` (new) — the pure, deterministic module: seeded knot placement on the
+    arms (round-robin, wobble + tight jitter), the desynchronised 26 s life cycle
+    (gathering → birth flash + shock ring → newborn cluster → dispersion), the continuous
+    glow curve, and the newborn/star geometry.
+  - `lib/nursery.test.ts` (new) — 15 tests: determinism, region count, on-arm placement
+    against the starfield arm math, galaxy-angle rotation, desynchronisation, phase
+    ordering, boundary values, flash curve, glow continuity at the wrap, newborn/shell
+    lifecycles, radius scaling, tiny-screen / 1..5-arm robustness, phase labels.
+  - `components/StarField.tsx` — new opt-in `nurseryMode` prop, a `nursery` clock that only
+    advances when on and reduced motion is off, and the behind-the-stars draw pass (rosy
+    glow, birth flash, expanding shock ring, newborn cluster with halos), inside the galaxy
+    zoom transform and `starScale`-scaled so knots keep constant on-screen size while zoomed.
+  - `lib/recipe.ts` — the shareable `?nursery=` layer toggle (off by default, surfaced in
+    `describeRecipe` as "Star Nurseries"), plus `nursery` in the recipe/round-trip surface.
+  - `app/page.tsx` — the **Star Nurseries** chip in the Galaxy Dock's environment row.
+  - Purely additive: with the layer off the starfield renders exactly as before. Under
+    reduced motion the clock is frozen, so the clouds hold a still, scattered state.
+
 ## [0.22.0] — 2026-07-20
 
 ### Added

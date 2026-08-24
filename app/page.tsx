@@ -248,6 +248,7 @@ export default function Home() {
           ringedGiantMode={recipe.ringedGiant}
           pulsarMode={recipe.pulsar}
           voyagerMode={recipe.voyager}
+          nurseryMode={recipe.nursery}
           onZoom={setZoom}
           canvasRef={(el) => {
             canvasRef.current = el;
@@ -360,6 +361,12 @@ export default function Home() {
               active: recipe.voyager,
               onToggle: () => toggle("voyager"),
               color: "rgba(103,232,249,0.9)",
+            },
+            {
+              label: "Star Nurseries",
+              active: recipe.nursery,
+              onToggle: () => toggle("nursery"),
+              color: "rgba(244,114,182,0.9)",
             },
           ]}
         />

@@ -5,6 +5,102 @@ additive and dated. New features are added here every evolution cycle.
 
 ---
 
+## Star Nurseries — H II Regions Where Stars Are Born
+
+- **Date added:** 2026-08-24
+- **Version:** 0.23.0
+- **Status:** Shipped & live on Vercel — https://pinwheel-galaxy.vercel.app
+
+### What + why
+
+The site is named after the Pinwheel Galaxy (M74), whose signature in every
+photograph is its rosy pink H II star-forming knots — and the catalog already
+shows stellar *death* (Supernova) but never *birth*. Star Nurseries adds the
+birth half of the story: opt-in H II regions riding the spiral arms, exactly
+where stars form in a real disk. Each knot lives a slow, looping ~26 s life on
+its own desynchronised clock: a dim rosy cloud gathers along the arm, flares in
+a blue-white birth flash with an expanding shock ring as the embedded stars
+ignite, glows with a small cluster of newborn stars while it pulses gently, then
+disperses, leaving a faint remnant before the next generation gathers in the
+same spot. Because the cycles are desynchronised, a wave of star birth circles
+the galaxy rather than pulsing in unison. Purely additive atmosphere — off by
+default, it never touches the stars or any other layer.
+
+### How it works (high-level)
+
+- `lib/nursery.ts` (new) holds the pure, deterministic model, unit-tested
+  (`lib/nursery.test.ts`). `createNurseryRegions(arms, seed)` places seven knots
+  with a mulberry32 PRNG — one per arm (round-robin), spread along each arm with
+  a small seeded wobble and a tight ±0.12 rad jitter so they sit *on* the arm
+  spiral (mirroring the starfield's own `t^0.7*0.9+0.05` radius / `2.2π` wind
+  math). Each region carries its own seeded `cycleOffset` (desynchronised
+  0–26 s), a rosy hue (328–354), a pulse phase, and 3–6 newborn-star offsets
+  (uniform-in-area, `sqrt`-biased, inside the knot). `computeNursery` walks the
+  shared `NURSERY_CYCLE_MS` clock and returns each knot's live state: position
+  (orbiting with `galaxyAngle`), radius, `glowAlpha` (a continuous piecewise
+  curve with a per-knot breathing wiggle, quiet floor 0.12 = wrap value so it
+  never pops), a Gaussian `birthFlash` peaking at u=0.22, a `shell` that expands
+  0.5×→3.2× the base radius while fading, and a `newbornAlpha` that ramps in
+  over the flash, holds, and fades to a 0.12 remnant.
+- `components/StarField.tsx` gained an opt-in `nurseryMode` prop and a `nursery`
+  clock that only advances when the layer is on and reduced motion is off. Its
+  draw pass runs **inside the galaxy-zoom transform, behind the stars** (like
+  the nebula): a rosy radial-gradient glow per knot, the blue-white birth flash
+  with an expanding shock ring, and the newborn star cluster with soft halos.
+  Knot radii and line widths are scaled by `starScale` so they keep constant
+  on-screen size while zoomed, exactly like the stars.
+- `lib/recipe.ts` gained a shareable `?nursery=` layer toggle (off by default)
+  surfaced in `describeRecipe` as "Star Nurseries".
+- `app/page.tsx` wires `nurseryMode={recipe.nursery}` and adds a **Star
+  Nurseries** chip to the Galaxy Dock's environment row.
+
+### Key files / components
+
+- `lib/nursery.ts` (new) and `lib/nursery.test.ts` (new, 15 tests).
+- `components/StarField.tsx` — new `nurseryMode` prop, nursery clock, and the
+  behind-the-stars rosy-glow / birth-flash / shock-ring / newborns draw pass.
+- `lib/recipe.ts` — the shareable `?nursery=` layer toggle.
+- `app/page.tsx` — the **Star Nurseries** toggle chip.
+
+### User-facing behavior
+
+- Toggle **Star Nurseries: On** (or open `?nursery=on`) and watch — seven rosy
+  knots appear along the spiral arms. Over the following ~26 s each one gathers,
+  flares in a blue-white flash with a spreading ring, and glows with newborn
+  stars before its gas disperses, with the seven cycles staggered so births
+  ripple around the galaxy. The knots orbit with the galaxy's spin and scale
+  with the zoom. Every other toggle, knob and the gravity well keep working
+  exactly as before.
+- Reduced motion: the nursery clock is frozen, so the clouds hold a still,
+  scattered state (glowing knots at fixed phases) with no animation.
+
+### How to test / try it
+
+1. `npm install` → `npm run build` → `npm start`; toggle **Star Nurseries: On**
+   and watch a knot ignite within ~a few seconds (cycles are desynchronised, so
+   something is always mid-life).
+2. Open `?nursery=on` to pre-enable it; copy the URL and open it elsewhere to
+   verify the exact layer re-hydrates.
+3. Zoom with the mouse wheel — the knots keep constant on-screen size while the
+   disk scales under them.
+4. `npm test` — 15 new tests cover determinism, region count, on-arm placement
+   (angle + radius vs the starfield arm math), galaxy-angle rotation,
+   desynchronisation, phase ordering over a full cycle, boundary values, the
+   birth flash curve, glow continuity at the wrap, newborn/shell lifecycles,
+   radius scaling, tiny-screen and 1..5-arm robustness, and phase labels.
+
+### Known limitations / follow-ups
+
+- The knots are radial-gradient glows, not volumetric filaments; a follow-up
+  could render wispy tendrils or seed the knots from the theme's nebula palette.
+- The cycle length (26 s) and knot count (7) are tuned constants; exposing a
+  "birth rate" knob or seeding the knot count from the star count is a natural
+  extension.
+- The newborns are drawn as simple points + halos; a follow-up could give the
+  brightest newborns diffraction spikes (like the supernova) at the flash peak.
+
+---
+
 ## Comet Voyager — a Wandering Comet
 
 - **Date added:** 2026-07-20

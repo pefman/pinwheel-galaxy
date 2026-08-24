@@ -108,6 +108,7 @@ import {
   computeVoyager,
   VOYAGER_SPEED_FULL_PX_S,
 } from "@/lib/cometVoyager";
+import { computeNursery } from "@/lib/nursery";
 
 const SPRING_K = 0.02; // how strongly stars return to their orbit
 const DAMPING = 0.86; // velocity damping per frame
@@ -262,6 +263,7 @@ export default function StarField({
   ringedGiantMode = false,
   pulsarMode = false,
   voyagerMode = false,
+  nurseryMode = false,
   onZoom,
   canvasRef,
 }: {
@@ -324,6 +326,16 @@ export default function StarField({
    * cursor. Pure atmosphere — never touches the stars or the spring physics.
    */
   voyagerMode?: boolean;
+  /**
+   * Star Nurseries: an opt-in layer of rosy H II star-formation regions riding
+   * the spiral arms — the pink knots of the real Pinwheel Galaxy (M74). Each
+   * knot slowly gathers, flares in a birth flash with an expanding shock ring,
+   * then glows with blue-white newborn stars before dispersing, on its own
+   * desynchronised cycle. The knots orbit with the galaxy and live inside the
+   * Galaxy Zoom transform. Pure atmosphere — never touches the stars or the
+   * spring physics.
+   */
+  nurseryMode?: boolean;
   /** Called with the live zoom whenever it changes, so the parent can share it. */
   onZoom?: (zoom: number) => void;
   /** Forwarded to the canvas element, so the parent can capture it (e.g. for a
@@ -433,6 +445,11 @@ export default function StarField({
     // arcs and departs smoothly between frames. Under reduced motion the
     // clock stays frozen, so the comet simply does not visit.
     let voyagerTime = 0;
+    // Star Nurseries: a running clock (ms) for the H II regions' life cycles.
+    // Every knot's state is a pure function of this clock, so the clouds
+    // gather, flash and disperse smoothly between frames. Under reduced motion
+    // the clock stays frozen, so the clouds hold a still, scattered state.
+    let nurseryTime = 0;
 
     const resize = () => {
       dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
@@ -653,6 +670,12 @@ export default function StarField({
       // Paused under reduced motion (the comet does not visit).
       if (voyagerMode && !reduced) {
         voyagerTime += dt * 1000;
+      }
+
+      // Star Nurseries: advance the life-cycle clock (ms); frozen under
+      // reduced motion, so the knots simply hold still.
+      if (nurseryMode && !reduced) {
+        nurseryTime += dt * 1000;
       }
 
       const cx = w / 2;
@@ -1267,6 +1290,79 @@ export default function StarField({
         ctx.translate(-cx, -cy);
       }
 
+      // Star Nurseries: rosy H II star-formation knots riding the spiral arms
+      // — M74's signature pink regions. Each knot is a pure function of the
+      // nursery clock: a cloud gathers, flares in a blue-white birth flash with
+      // an expanding shock ring, then shines with newborn stars before the gas
+      // disperses. Drawn behind the stars (they sit on top of the gas) and
+      // inside the zoom transform, so the knots orbit the galaxy and keep a
+      // constant on-screen size while the user dollys in.
+      if (nurseryMode) {
+        const regions = computeNursery({
+          time: nurseryTime,
+          width: w,
+          height: h,
+          arms: config.arms,
+          galaxyAngle,
+        });
+        for (const r of regions) {
+          const rr = r.radius * starScale;
+          // The rosy H II glow: a soft pink-red cloud of ionised hydrogen.
+          const glow = ctx.createRadialGradient(r.x, r.y, 0, r.x, r.y, rr);
+          glow.addColorStop(0, `hsla(${r.hue}, 85%, 74%, ${0.5 * r.glowAlpha})`);
+          glow.addColorStop(0.5, `hsla(${r.hue}, 80%, 62%, ${0.25 * r.glowAlpha})`);
+          glow.addColorStop(1, `hsla(${r.hue}, 80%, 55%, 0)`);
+          ctx.fillStyle = glow;
+          ctx.beginPath();
+          ctx.arc(r.x, r.y, rr, 0, Math.PI * 2);
+          ctx.fill();
+          // The birth flash: a hot blue-white core igniting inside the knot.
+          if (r.birthFlash > 0.02) {
+            const coreR = Math.max(1.5, rr * 0.3 * r.birthFlash);
+            const core = ctx.createRadialGradient(
+              r.x,
+              r.y,
+              0,
+              r.x,
+              r.y,
+              coreR,
+            );
+            core.addColorStop(0, `hsla(212, 95%, 94%, ${0.95 * r.birthFlash})`);
+            core.addColorStop(0.4, `hsla(210, 90%, 82%, ${0.6 * r.birthFlash})`);
+            core.addColorStop(1, `hsla(210, 90%, 75%, 0)`);
+            ctx.fillStyle = core;
+            ctx.beginPath();
+            ctx.arc(r.x, r.y, coreR, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          // The expanding shock ring pushed out by the ignition.
+          if (r.shellAlpha > 0.01) {
+            ctx.strokeStyle = `hsla(205, 90%, 85%, ${r.shellAlpha})`;
+            ctx.lineWidth = 1.25 * starScale;
+            ctx.beginPath();
+            ctx.arc(r.x, r.y, r.shellRadius * starScale, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          // The blue-white newborn stars embedded in the knot (hot young O/B
+          // stars are blue, in contrast to the rosy gas around them).
+          if (r.newbornAlpha > 0.02) {
+            for (const nb of r.newborns) {
+              const nx = r.x + nb.ux * rr * 0.55;
+              const ny = r.y + nb.uy * rr * 0.55;
+              const s = nb.size * starScale;
+              ctx.fillStyle = `hsla(215, 85%, 88%, ${r.newbornAlpha})`;
+              ctx.beginPath();
+              ctx.arc(nx, ny, s, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.fillStyle = `hsla(215, 85%, 88%, ${0.25 * r.newbornAlpha})`;
+              ctx.beginPath();
+              ctx.arc(nx, ny, s * 2.6, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+        }
+      }
+
       // Constellation mode: draw faint links between nearby stars. When Stellar
       // Depth is on, each star is drawn at its parallax-shifted position so the
       // web bends with the 3D layering.
@@ -1664,6 +1760,7 @@ export default function StarField({
     ringedGiantMode,
     pulsarMode,
     voyagerMode,
+    nurseryMode,
     onZoom,
   ]);
 

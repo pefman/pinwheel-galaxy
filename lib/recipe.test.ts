@@ -67,6 +67,7 @@ test("parseRecipe and recipeToParams round-trip", () => {
     ringedGiant: false,
     pulsar: false,
     voyager: true,
+    nursery: false,
   };
   const qs = recipeToParams(recipe);
   assert.deepEqual(parseRecipe(qs), recipe);
@@ -108,7 +109,22 @@ test("RECIPE_PARAMS covers every layer exactly once", () => {
     "ringedGiant",
     "pulsar",
     "voyager",
+    "nursery",
   ]);
+});
+
+test("parseRecipe reads the nursery layer", () => {
+  const r = parseRecipe(new URLSearchParams({ nursery: "on" }));
+  assert.equal(r.nursery, true);
+  assert.equal(parseRecipe(new URLSearchParams({})).nursery, false);
+  assert.equal(
+    recipeToParams({ ...DEFAULT_RECIPE, nursery: true }).get("nursery"),
+    "on",
+  );
+  assert.equal(
+    describeRecipe({ ...DEFAULT_RECIPE, nursery: true }),
+    "Star Nurseries",
+  );
 });
 
 test("describeRecipe lists the on-layers and defaults cleanly", () => {

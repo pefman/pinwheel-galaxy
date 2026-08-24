@@ -49,6 +49,10 @@ export interface GalaxyRecipe {
    * that arrives on its own clock, arcs across the sky with a glowing tail,
    * and departs. */
   voyager: boolean;
+  /** Star Nurseries: an opt-in layer of rosy H II star-formation regions that
+   * ride the spiral arms, gather, flare in a birth flash and shine with
+   * blue-white newborn stars — star birth in the Pinwheel. */
+  nursery: boolean;
 }
 
 export const DEFAULT_RECIPE: GalaxyRecipe = {
@@ -67,6 +71,7 @@ export const DEFAULT_RECIPE: GalaxyRecipe = {
   ringedGiant: false,
   pulsar: false,
   voyager: false,
+  nursery: false,
 };
 
 /** The URL param name for each layer, in a stable display order. */
@@ -86,6 +91,7 @@ export const RECIPE_PARAMS = {
   ringedGiant: "ringedGiant",
   pulsar: "pulsar",
   voyager: "voyager",
+  nursery: "nursery",
 } as const;
 
 /** Read one boolean layer param; missing / non-"on" values are `false`. */
@@ -115,6 +121,7 @@ export function parseRecipe(params: URLSearchParams): GalaxyRecipe {
     ringedGiant: parseLayer(params, RECIPE_PARAMS.ringedGiant),
     pulsar: parseLayer(params, RECIPE_PARAMS.pulsar),
     voyager: parseLayer(params, RECIPE_PARAMS.voyager),
+    nursery: parseLayer(params, RECIPE_PARAMS.nursery),
   };
 }
 
@@ -140,6 +147,7 @@ export function recipeToParams(recipe: Partial<GalaxyRecipe>): URLSearchParams {
   if (recipe.ringedGiant) p.set(RECIPE_PARAMS.ringedGiant, "on");
   if (recipe.pulsar) p.set(RECIPE_PARAMS.pulsar, "on");
   if (recipe.voyager) p.set(RECIPE_PARAMS.voyager, "on");
+  if (recipe.nursery) p.set(RECIPE_PARAMS.nursery, "on");
   return p;
 }
 
@@ -165,6 +173,7 @@ export function resolveRecipe(partial: Partial<GalaxyRecipe>): GalaxyRecipe {
     ringedGiant: partial.ringedGiant ?? DEFAULT_RECIPE.ringedGiant,
     pulsar: partial.pulsar ?? DEFAULT_RECIPE.pulsar,
     voyager: partial.voyager ?? DEFAULT_RECIPE.voyager,
+    nursery: partial.nursery ?? DEFAULT_RECIPE.nursery,
   };
 }
 
@@ -200,6 +209,7 @@ export function describeRecipe(recipe: GalaxyRecipe): string {
     on("Ringed Giant", recipe.ringedGiant),
     on("Pulsar", recipe.pulsar),
     on("Comet Voyager", recipe.voyager),
+    on("Star Nurseries", recipe.nursery),
   ].filter(Boolean) as string[];
   return parts.length ? parts.join(", ") : "Default galaxy";
 }
